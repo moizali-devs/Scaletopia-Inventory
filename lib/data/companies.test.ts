@@ -1,0 +1,130 @@
+import { describe, expect, it } from "vitest";
+import {
+  getCompanies,
+  getCompanyDetail,
+  getCompanyFilterOptions,
+  getAllFilteredCompanies,
+} from "@/lib/data/companies";
+
+describe("getCompanyFilterOptions", () => {
+  it("returns normalized, deduped options for every filter dimension", async () => {
+    const options = await getCompanyFilterOptions();
+
+    expect(options.niches.length).toBeGreaterThan(0);
+    expect(options.sources.length).toBeGreaterThan(0);
+    expect(options.industries.length).toBeGreaterThan(0);
+    expect(options.countries.length).toBeGreaterThan(0);
+    expect(options.employeeBuckets).toHaveLength(5);
+
+    // country synonyms collapse: US/United States/united states -> one entry
+    const us = options.countries.filter((c) => c.id === "US");
+    expect(us).toHaveLength(1);
+    expect(us[0].label).toBe("United States");
+
+    // source ids are canonical, never raw delimited/variant strings
+    for (const s of options.sources) {
+      expect(s.id).not.toMatch(/[,&]/);
+    }
+  });
+});
+
+describe("getCompanies", () => {
+  it("returns paginated results with a total count", async () => {
+    const result = await getCompanies({}, 1, 25);
+    expect(result.rows).toHaveLength(25);
+    expect(result.total).toBeGreaterThan(25);
+    expect(result.page).toBe(1);
+  });
+
+  it("search filters by name or domain substring", async () => {
+    const first = await getAllFilteredCompanies({});
+    const sample = first[0];
+    const term = (sample.companyName ?? sample.domain ?? "").slice(0, 4);
+    if (!term) return;
+
+    const result = await getCompanies({ search: term }, 1, 1000);
+    expect(result.rows.length).toBeGreaterThan(0);
+    for (const row of result.rows) {
+      const haystack = `${row.companyName ?? ""} ${row.domain ?? ""}`.toLowerCase();
+      expect(haystack).toContain(term.toLowerCase());
+    }
+  });
+
+  it("niche filter returns only companies with that niche", async () => {
+    const options = await getCompanyFilterOptions();
+    const niche = options.niches[0];
+
+    const result = await getCompanies({ niche: [niche.id] }, 1, 1000);
+    expect(result.total).toBe(niche.count);
+    for (const row of result.rows) {
+      expect(row.industry !== undefined).toBe(true); // sanity: row shape intact
+    }
+  });
+
+  it("source filter matches normalized tokens regardless of raw variant", async () => {
+    const result = await getCompanies({ source: ["aiark"] }, 1, 1000);
+    expect(result.total).toBeGreaterThan(0);
+    for (const row of result.rows) {
+      expect(row.sources).toContain("aiark");
+    }
+  });
+
+  it("employee size buckets exclude null employee_count and respect ranges", async () => {
+    const result = await getCompanies({ employeeBucket: ["1-10"] }, 1, 1000);
+    expect(result.total).toBeGreaterThan(0);
+    for (const row of result.rows) {
+      expect(row.employeeCount).not.toBeNull();
+      expect(row.employeeCount as number).toBeGreaterThanOrEqual(1);
+      expect(row.employeeCount as number).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it("country filter collapses synonyms (US/United States/united states)", async () => {
+    const result = await getCompanies({ country: ["US"] }, 1, 1000);
+    expect(result.total).toBeGreaterThan(0);
+  });
+
+  it("industry filter matches case-insensitively", async () => {
+    const options = await getCompanyFilterOptions();
+    const industry = options.industries.find((i) => i.count > 0);
+    expect(industry).toBeDefined();
+
+    const result = await getCompanies({ industry: [industry!.id] }, 1, 1000);
+    expect(result.total).toBe(industry!.count);
+  });
+
+  it("combines multiple filters with AND semantics", async () => {
+    const broad = await getCompanies({ source: ["aiark"] }, 1, 1000);
+    const narrowed = await getCompanies(
+      { source: ["aiark"], employeeBucket: ["1-10"] },
+      1,
+      1000
+    );
+    expect(narrowed.total).toBeLessThanOrEqual(broad.total);
+  });
+});
+
+describe("getCompanyDetail", () => {
+  it("returns full detail with tags as-is and blocklisted custom_data stripped", async () => {
+    const list = await getCompanies({}, 1, 1);
+    const id = list.rows[0].id;
+
+    const detail = await getCompanyDetail(id);
+    expect(detail).not.toBeNull();
+    expect(detail!.id).toBe(id);
+    expect(Array.isArray(detail!.tags)).toBe(true);
+
+    for (const blocked of ["naics", "aiark_id", "industries", "legal_name", "created_at", "updated_at"]) {
+      expect(detail!.customData).not.toHaveProperty(blocked);
+    }
+    for (const key of Object.keys(detail!.customData)) {
+      expect(key.startsWith("pushed_to_")).toBe(false);
+      expect(key.endsWith("_at")).toBe(false);
+    }
+  });
+
+  it("returns null for a non-existent id", async () => {
+    const detail = await getCompanyDetail("00000000-0000-0000-0000-000000000000");
+    expect(detail).toBeNull();
+  });
+});

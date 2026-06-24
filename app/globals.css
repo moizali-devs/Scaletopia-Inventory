@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  /* Ledger-printout palette — see lib/data for the data this expresses */
+  --paper: #faf9f3;
+  --greenbar: #dde7d8;
+  --greenbar-strong: #c9d8c2;
+  --ink: #182320;
+  --ink-soft: #5c6b62;
+  --rule: #b9c4b3;
+  --stamp: #c1432a;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--greenbar);
+  --secondary-foreground: var(--ink);
+  --muted: var(--greenbar);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--stamp);
+  --accent-foreground: var(--paper);
+  --destructive: var(--stamp);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--stamp);
+  --radius: 0.25rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-paper: var(--paper);
+  --color-greenbar: var(--greenbar);
+  --color-greenbar-strong: var(--greenbar-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-stamp: var(--stamp);
+
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-plex-sans), sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
