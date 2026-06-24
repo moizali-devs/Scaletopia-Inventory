@@ -5,6 +5,7 @@ import { normalizeCountry } from "@/lib/data/country";
 import { normalizeIndustry } from "@/lib/data/industry";
 import { EMPLOYEE_BUCKETS, employeeBucketOf } from "@/lib/data/employee-size";
 import { filterCustomData } from "@/lib/data/custom-data";
+import { sortByLastUpdatedDesc } from "@/lib/data/sort";
 
 export interface CompanyListFilters {
   search?: string;
@@ -132,15 +133,6 @@ function toListRow(row: RawCompanyRow): CompanyListRow {
     qualityTier: row.quality_tier,
     lastUpdated: row.last_updated,
   };
-}
-
-function sortByLastUpdatedDesc(rows: RawCompanyRow[]): RawCompanyRow[] {
-  return [...rows].sort((a, b) => {
-    const aTime = a.last_updated ? Date.parse(a.last_updated) : -Infinity;
-    const bTime = b.last_updated ? Date.parse(b.last_updated) : -Infinity;
-    if (bTime !== aTime) return bTime - aTime;
-    return a.id.localeCompare(b.id);
-  });
 }
 
 export async function getCompanies(
