@@ -19,11 +19,11 @@ export function EmailStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide",
-        status === "ok" && "border-stamp bg-stamp text-paper",
-        status === "catch_all" && "border-ink text-ink",
-        status === "invalid" && "border-rule text-ink-soft",
-        status === "unknown" && "border-rule text-ink-soft"
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+        status === "ok" && "bg-success/15 text-success",
+        status === "catch_all" && "bg-warning/15 text-warning",
+        status === "invalid" && "bg-danger/15 text-danger",
+        status === "unknown" && "bg-rule/50 text-ink-soft"
       )}
     >
       {STATUS_LABEL[status] ?? status}

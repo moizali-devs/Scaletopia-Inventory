@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { fetchAllRows } from "@/lib/data/fetch-all-rows";
+import { withTtlCache } from "@/lib/data/cache-with-ttl";
 import { normalizeSourceTokens, sourceLabel } from "@/lib/data/source";
 import { normalizeCountry } from "@/lib/data/country";
 import { normalizeIndustry } from "@/lib/data/industry";
@@ -91,19 +92,29 @@ interface CompanyJoinData {
   knownClients: Set<string>;
 }
 
+/** The companies table is ~29k rows; both getPeople and getPersonFilterOptions
+ * need this join per request, and it's identical across requests until the
+ * next sync, so it's cached the same way as the companies filter-option rows
+ * (see companies.ts) rather than re-fetched from Supabase every time. */
+const fetchCompanyJoinRows = withTtlCache(
+  () =>
+    fetchAllRows<{
+      id: string;
+      niche: string | null;
+      employee_count: number | null;
+      industry: string | null;
+      client: string | null;
+    }>("companies", "id,niche,employee_count,industry,client"),
+  60_000
+);
+
 /** Companies have native niche/employee_count/industry columns people lack on
  * their own row, so Employee Size, Industry, and (when the linked company's
  * niche is empty) Niche all need this join. `knownClients` — derived from
  * `client` rather than an external list — backs the tag-parsing niche
  * fallback in `niche.ts`. */
 async function loadCompanyJoinData(): Promise<CompanyJoinData> {
-  const rows = await fetchAllRows<{
-    id: string;
-    niche: string | null;
-    employee_count: number | null;
-    industry: string | null;
-    client: string | null;
-  }>("companies", "id,niche,employee_count,industry,client");
+  const rows = await fetchCompanyJoinRows();
 
   const byId = new Map<string, LinkedCompanyJoinRow>();
   const knownClients = new Set<string>();
@@ -136,13 +147,12 @@ function jobTitleTerms(raw: string | undefined): string[] {
 
 /** Mirrors the Companies data layer's split: native-column filters
  * (search, email status, phone type) run through PostgREST; everything
- * touching synonyms, joins, or tag-parsing (country/source/industry/employee
- * size/niche/email-or-phone-presence/job title) is matched in-app against
- * the candidate set. */
-async function fetchFilteredRows(
-  filters: PersonListFilters,
-  companyData: CompanyJoinData
-): Promise<RawPersonRow[]> {
+ * touching synonyms or tag-parsing (country/source/email-or-phone-presence/
+ * job title) is matched in-app against the candidate set. Filters that need
+ * the company join (industry/employee size/niche) are deliberately left out
+ * here — see `applyCompanyJoinFilters` — so this fetch's cache key doesn't
+ * depend on the non-serializable company join map. */
+async function fetchFilteredRowsUncached(filters: PersonListFilters): Promise<RawPersonRow[]> {
   const search = filters.search?.trim();
 
   const rows = await fetchAllRows<RawPersonRow>("people", LIST_COLUMNS, (query) => {
@@ -179,6 +189,30 @@ async function fetchFilteredRows(
       if (!tokens.some((t) => filters.source!.includes(t))) return false;
     }
 
+    return true;
+  });
+}
+
+/** The people table dwarfs companies; re-fetching and re-filtering it from
+ * Supabase on every request (this page is force-dynamic) is the dominant
+ * cost on /people, same as companies.ts. Cached per unique filter
+ * combination, short TTL — see the companies.ts comment for why that's safe
+ * for this synced-in-batches dataset. */
+const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 60_000);
+
+/** Applies the company-join-dependent filters (industry, employee size,
+ * niche) that fetchFilteredRows can't cache on its own, since they depend on
+ * the company join map rather than the filters object alone. */
+function applyCompanyJoinFilters(
+  rows: RawPersonRow[],
+  filters: PersonListFilters,
+  companyData: CompanyJoinData
+): RawPersonRow[] {
+  if (!filters.industry?.length && !filters.employeeBucket?.length && !filters.niche?.length) {
+    return rows;
+  }
+
+  return rows.filter((row) => {
     const company = row.company_id ? companyData.byId.get(row.company_id) : undefined;
 
     if (filters.industry?.length) {
@@ -221,8 +255,11 @@ export async function getPeople(
   page = 1,
   pageSize = 50
 ): Promise<PersonListResult> {
-  const companyData = await loadCompanyJoinData();
-  const rows = sortByLastUpdatedDesc(await fetchFilteredRows(filters, companyData));
+  const [companyData, candidateRows] = await Promise.all([
+    loadCompanyJoinData(),
+    fetchFilteredRows(filters),
+  ]);
+  const rows = sortByLastUpdatedDesc(applyCompanyJoinFilters(candidateRows, filters, companyData));
   const start = (page - 1) * pageSize;
   return {
     rows: rows.slice(start, start + pageSize).map(toListRow),
@@ -235,20 +272,30 @@ export async function getPeople(
 /** Same query + filtering as getPeople, with no pagination — the export
  * function must run through the identical filtered query, not a separate path. */
 export async function getAllFilteredPeople(filters: PersonListFilters): Promise<PersonListRow[]> {
-  const companyData = await loadCompanyJoinData();
-  return sortByLastUpdatedDesc(await fetchFilteredRows(filters, companyData)).map(toListRow);
+  const [companyData, candidateRows] = await Promise.all([
+    loadCompanyJoinData(),
+    fetchFilteredRows(filters),
+  ]);
+  return sortByLastUpdatedDesc(applyCompanyJoinFilters(candidateRows, filters, companyData)).map(
+    toListRow
+  );
 }
 
+const fetchPersonFilterOptionRows = withTtlCache(
+  () =>
+    fetchAllRows<{
+      company_id: string | null;
+      source: string | null;
+      country: string | null;
+      tags: string[] | null;
+      email_status: string | null;
+      phone_type: string | null;
+    }>("people", "company_id,source,country,tags,email_status,phone_type"),
+  60_000
+);
+
 export async function getPersonFilterOptions(): Promise<PersonFilterOptions> {
-  const companyData = await loadCompanyJoinData();
-  const rows = await fetchAllRows<{
-    company_id: string | null;
-    source: string | null;
-    country: string | null;
-    tags: string[] | null;
-    email_status: string | null;
-    phone_type: string | null;
-  }>("people", "company_id,source,country,tags,email_status,phone_type");
+  const [companyData, rows] = await Promise.all([loadCompanyJoinData(), fetchPersonFilterOptionRows()]);
 
   const niches = new Map<string, number>();
   const sources = new Map<string, number>();

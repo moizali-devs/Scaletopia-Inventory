@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCompanyDetail } from "@/lib/data/companies";
-import { Masthead } from "@/components/shared/masthead";
-import { SprocketRail } from "@/components/shared/sprocket-rail";
-import { Perforation } from "@/components/companies/perforation";
+import { AppShell } from "@/components/dashboard/app-shell";
+import { Topbar } from "@/components/dashboard/topbar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecordField } from "@/components/companies/record-field";
 import { TagChip } from "@/components/companies/tag-chip";
 import { SourceChip } from "@/components/companies/source-chip";
@@ -24,135 +24,142 @@ export default async function CompanyDetailPage({
   const location = [company.city, company.state, company.country].filter(Boolean).join(", ");
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
-      <Masthead title="Company Record" generatedAt={new Date()} />
+    <AppShell>
+      <Topbar section="Companies" page="Company Record" />
 
-      <div className="flex flex-1 justify-center">
-        <SprocketRail className="border-r border-rule" />
-
-        <main className="flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10 md:px-10">
-          <Link
-            href="/companies"
-            className="font-mono text-[11px] uppercase tracking-wide text-ink-soft hover:text-stamp"
-          >
-            &lt; Back to ledger
+      <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
+        <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
+          <Link href="/companies" className="text-sm text-ink-soft hover:text-stamp">
+            &larr; Back to companies
           </Link>
 
-          <section className="relative border border-rule bg-card">
-            <Perforation />
-
-            <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5">
-              <div>
-                <h1 className="font-mono text-2xl font-semibold uppercase tracking-tight">
-                  {company.companyName ?? "Unnamed company"}
-                </h1>
-                {company.domain && (
-                  <a
-                    href={`https://${company.domain}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-sm text-ink-soft hover:text-stamp"
-                  >
-                    {company.domain}
-                  </a>
-                )}
-              </div>
-              <div className="rotate-[-6deg]">
-                <QualityBadge tier={company.qualityTier} />
-              </div>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-ink">
+                {company.companyName ?? "Unnamed company"}
+              </h1>
+              {company.domain && (
+                <a
+                  href={`https://${company.domain}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-ink-soft hover:text-stamp"
+                >
+                  {company.domain}
+                </a>
+              )}
+              {(company.websiteUrl || company.linkedinUrl) && (
+                <div className="mt-1 flex flex-wrap gap-4 text-xs">
+                  {company.websiteUrl && (
+                    <a
+                      href={company.websiteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-stamp underline-offset-2 hover:underline"
+                    >
+                      Website ↗
+                    </a>
+                  )}
+                  {company.linkedinUrl && (
+                    <a
+                      href={company.linkedinUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-stamp underline-offset-2 hover:underline"
+                    >
+                      LinkedIn ↗
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+            <QualityBadge tier={company.qualityTier} />
+          </div>
 
-            <div className="grid gap-x-8 border-t border-rule px-6 py-4 md:grid-cols-2">
-              <div>
+          {company.description && (
+            <p className="text-sm leading-relaxed text-ink-soft">{company.description}</p>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Firmographics</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col">
                 <RecordField label="Industry">{company.industry ?? "—"}</RecordField>
                 <RecordField label="Employees">
                   {company.employeeCount?.toLocaleString("en-US") ?? "—"}
                 </RecordField>
-                <RecordField label="Location">{location || "—"}</RecordField>
-                <RecordField label="Phone">{company.phone ?? "—"}</RecordField>
                 <RecordField label="Founded">{company.foundedYear ?? "—"}</RecordField>
                 <RecordField label="Revenue">
                   {company.revenue ? `$${company.revenue.toLocaleString("en-US")}` : "—"}
                 </RecordField>
-              </div>
-              <div>
                 <RecordField label="Niche">{company.niche ?? "—"}</RecordField>
                 <RecordField label="Client">{company.client ?? "—"}</RecordField>
-                <RecordField label="Domain status">{company.domainStatus ?? "—"}</RecordField>
-                <RecordField label="MX provider">{company.mxProvider ?? "—"}</RecordField>
-                <RecordField label="Security gateway">{company.securityGateway ?? "—"}</RecordField>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col">
+                <RecordField label="Phone">{company.phone ?? "—"}</RecordField>
+                <RecordField label="Location">{location || "—"}</RecordField>
                 <RecordField label="Last updated">
                   {company.lastUpdated
                     ? new Date(company.lastUpdated).toLocaleDateString("en-US")
                     : "—"}
                 </RecordField>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {(company.linkedinUrl || company.websiteUrl) && (
-              <div className="flex flex-wrap gap-4 border-t border-rule px-6 py-3 font-mono text-xs">
-                {company.websiteUrl && (
-                  <a
-                    href={company.websiteUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink underline-offset-2 hover:text-stamp hover:underline"
-                  >
-                    Website ↗
-                  </a>
-                )}
-                {company.linkedinUrl && (
-                  <a
-                    href={company.linkedinUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink underline-offset-2 hover:text-stamp hover:underline"
-                  >
-                    LinkedIn ↗
-                  </a>
-                )}
-              </div>
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Delivery</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col">
+                <RecordField label="Domain status">{company.domainStatus ?? "—"}</RecordField>
+                <RecordField label="MX provider">{company.mxProvider ?? "—"}</RecordField>
+                <RecordField label="Security gateway">
+                  {company.securityGateway ?? "—"}
+                </RecordField>
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-rule px-6 py-4">
-              <span className="font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-                Source
-              </span>
-              {company.sources.length > 0 ? (
-                company.sources.map((id) => <SourceChip key={id} id={id} />)
-              ) : (
-                <span className="text-sm text-ink-soft">—</span>
-              )}
-            </div>
-
-            {company.description && (
-              <p className="border-t border-rule px-6 py-4 text-sm leading-relaxed text-ink">
-                {company.description}
-              </p>
-            )}
-          </section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Source</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {company.sources.length > 0 ? (
+                    company.sources.map((id) => <SourceChip key={id} id={id} />)
+                  ) : (
+                    <span className="text-sm text-ink-soft">—</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <section className="flex flex-col gap-2">
-            <h2 className="font-mono text-sm font-semibold uppercase tracking-wide">Tags</h2>
+            <h2 className="text-sm font-semibold text-ink">Tags</h2>
             <div className="flex flex-wrap gap-2">
               {company.tags.length > 0 ? (
                 company.tags.map((tag, i) => <TagChip key={`${tag}-${i}`} value={tag} />)
               ) : (
-                <span className="font-mono text-xs text-ink-soft">No tags</span>
+                <span className="text-sm text-ink-soft">No tags</span>
               )}
             </div>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="font-mono text-sm font-semibold uppercase tracking-wide">
-              Enrichment data
-            </h2>
+            <h2 className="text-sm font-semibold text-ink">Enrichment data</h2>
             <EnrichmentList data={company.customData} />
           </section>
-        </main>
-
-        <SprocketRail className="border-l border-rule" />
-      </div>
-    </div>
+        </div>
+      </main>
+    </AppShell>
   );
 }

@@ -1,50 +1,72 @@
-import { getOverview } from "@/lib/data/overview";
-import { Masthead } from "@/components/shared/masthead";
-import { Tally } from "@/components/overview/tally";
-import { ManifestList } from "@/components/overview/manifest-list";
-import { SprocketRail } from "@/components/shared/sprocket-rail";
+import { getDashboard } from "@/lib/data/dashboard";
+import { parseDashboardRange } from "@/lib/data/dashboard-search-params";
+import { AppShell } from "@/components/dashboard/app-shell";
+import { Topbar } from "@/components/dashboard/topbar";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { AreaChart } from "@/components/dashboard/area-chart";
+import { BarChart } from "@/components/dashboard/bar-chart";
+import { DonutChart } from "@/components/dashboard/donut-chart";
+import { MiniBarList } from "@/components/dashboard/mini-bar-list";
+import { RecentTable } from "@/components/dashboard/recent-table";
+import { DateRangePicker } from "@/components/dashboard/date-range-picker";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // Revalidate every hour
 
-export default async function OverviewPage() {
-  const overview = await getOverview();
-  const generatedAt = new Date();
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolved = await searchParams;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(resolved)) {
+    if (Array.isArray(value)) value.forEach((v) => params.append(key, v));
+    else if (value !== undefined) params.append(key, value);
+  }
+
+  const range = parseDashboardRange(params);
+  const data = await getDashboard(range);
+  const now = new Date();
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
-      <Masthead title="Inventory Manifest" generatedAt={generatedAt} />
+    <AppShell>
+      <Topbar section="Dashboards" page="Overview" />
 
-      <div className="flex flex-1 justify-center">
-        <SprocketRail className="border-r border-rule" />
+      <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
+        <div className="mx-auto flex w-full max-w-[920px] min-w-0 flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-ink">Overview</h1>
+            <DateRangePicker />
+          </div>
 
-        <main className="flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-10 md:px-10">
-          <section className="flex flex-col gap-4 sm:flex-row">
-            <Tally label="Total companies on file" value={overview.totalCompanies} />
-            <Tally label="Total people on file" value={overview.totalPeople} />
+          <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <StatCard label="Companies" value={data.totalCompanies} variant="blue" />
+            <StatCard label="People" value={data.totalPeople} variant="plain" />
+            <StatCard label="Niches" value={data.niches.length} variant="plain" />
+            <StatCard label="Sources" value={data.sources.length} variant="purple" />
           </section>
 
-          <section className="flex flex-col gap-6 md:flex-row">
-            <ManifestList
-              title="Niche breakdown"
-              caption="companies per niche, desc."
-              entries={overview.niches}
-            />
-            <ManifestList
-              title="Source breakdown"
-              caption="companies per provider, desc."
-              entries={overview.sources}
-            />
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <AreaChart
+                title="Catalog Distribution"
+                series={[
+                  { key: "niches", label: "By Niche", points: data.niches },
+                  { key: "sources", label: "By Source", points: data.sources },
+                ]}
+              />
+            </div>
+            <MiniBarList title="Sources" entries={data.sources} />
           </section>
 
-          <footer className="border-t border-rule pt-4 font-mono text-[11px] text-ink-soft">
-            END OF MANIFEST — {overview.niches.length} niches,{" "}
-            {overview.sources.length} sources,{" "}
-            {overview.totalCompanies.toLocaleString("en-US")} companies on record.
-          </footer>
-        </main>
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <BarChart title="Top Industries" entries={data.industries} />
+            <DonutChart title="Geography" entries={data.countries} />
+          </section>
 
-        <SprocketRail className="border-l border-rule" />
-      </div>
-    </div>
+          <RecentTable title="Recently Added Companies" rows={data.recentCompanies} now={now} />
+        </div>
+      </main>
+    </AppShell>
   );
 }

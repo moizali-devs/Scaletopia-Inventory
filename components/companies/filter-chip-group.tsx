@@ -23,7 +23,7 @@ export function FilterChipGroup({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">{title}</p>
+      <p className="text-xs font-medium text-ink-soft">{title}</p>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => {
           const active = selected.includes(option.id);
@@ -33,16 +33,22 @@ export function FilterChipGroup({
               type="button"
               aria-pressed={active}
               onClick={() => onToggle(option.id)}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  onToggle(option.id);
+                }
+              }}
               className={cn(
-                "rounded-full border px-2.5 py-1 font-mono text-xs transition-colors",
+                "rounded-full border px-2.5 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-stamp/50 focus-visible:ring-offset-2",
                 active
-                  ? "border-ink bg-ink text-paper"
-                  : "border-rule bg-card text-ink hover:border-ink"
+                  ? "border-stamp bg-stamp text-paper"
+                  : "border-rule bg-card text-ink hover:border-ink-soft focus-visible:ring-offset-0"
               )}
             >
               {option.label}
               {option.count !== undefined && (
-                <span className={cn("ml-1.5 tabular-nums", active ? "text-paper/60" : "text-ink-soft")}>
+                <span className={cn("ml-1.5 font-mono tabular-nums", active ? "text-paper/70" : "text-ink-soft")}>
                   {option.count.toLocaleString("en-US")}
                 </span>
               )}

@@ -19,7 +19,7 @@ export function SingleSelectGroup({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">{title}</p>
+      <p className="text-xs font-medium text-ink-soft">{title}</p>
       <div className="flex flex-wrap gap-1.5">
         {OPTIONS.map((option) => {
           const active = value === option.id;
@@ -30,10 +30,10 @@ export function SingleSelectGroup({
               aria-pressed={active}
               onClick={() => onChange(option.id)}
               className={cn(
-                "rounded-full border px-2.5 py-1 font-mono text-xs transition-colors",
+                "rounded-full border px-2.5 py-1 text-xs transition-colors",
                 active
-                  ? "border-ink bg-ink text-paper"
-                  : "border-rule bg-card text-ink hover:border-ink"
+                  ? "border-stamp bg-stamp text-paper"
+                  : "border-rule bg-card text-ink hover:border-ink-soft"
               )}
             >
               {option.label}

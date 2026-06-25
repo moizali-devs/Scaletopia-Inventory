@@ -23,20 +23,20 @@ export function Pagination({
   }
 
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4 font-mono text-[11px] text-ink-soft">
-      <span>
-        SHOWING {start.toLocaleString("en-US")}–{end.toLocaleString("en-US")} OF{" "}
-        {total.toLocaleString("en-US")} companies on record.
+    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-4 text-sm text-ink-soft">
+      <span className="font-mono text-xs tabular-nums">
+        {start.toLocaleString("en-US")}–{end.toLocaleString("en-US")} of{" "}
+        {total.toLocaleString("en-US")}
       </span>
       <nav className="flex items-center gap-3">
         <PageLink href={hrefFor(page - 1)} disabled={page <= 1}>
-          &lt; PREV
+          Prev
         </PageLink>
-        <span className="tabular-nums">
-          PAGE {page} / {lastPage}
+        <span className="font-mono text-xs tabular-nums">
+          {page} / {lastPage}
         </span>
         <PageLink href={hrefFor(page + 1)} disabled={page >= lastPage}>
-          NEXT &gt;
+          Next
         </PageLink>
       </nav>
     </footer>
@@ -53,10 +53,18 @@ function PageLink({
   children: React.ReactNode;
 }) {
   if (disabled) {
-    return <span className="cursor-not-allowed text-ink-soft/40">{children}</span>;
+    return (
+      <span className="cursor-not-allowed rounded-md px-2.5 py-1 text-ink-soft/40">
+        {children}
+      </span>
+    );
   }
   return (
-    <Link href={href} scroll={false} className={cn("text-ink hover:text-stamp")}>
+    <Link
+      href={href}
+      scroll={false}
+      className={cn("rounded-md px-2.5 py-1 text-ink transition-colors hover:bg-rule/30")}
+    >
       {children}
     </Link>
   );

@@ -1,32 +1,98 @@
 @import "tailwindcss";
 
 :root {
-  /* Ledger-printout palette — see lib/data for the data this expresses */
-  --paper: #faf9f3;
-  --greenbar: #dde7d8;
-  --greenbar-strong: #c9d8c2;
-  --ink: #182320;
-  --ink-soft: #5c6b62;
-  --rule: #b9c4b3;
-  --stamp: #c1432a;
+  /* Surfaces & text — light (SnowUI) */
+  --paper: #f9fafb;
+  --card: #ffffff;
+  /* Solid elevated surface for floating overlays (command palette, popovers)
+     that sit above a dim backdrop and must not be translucent. */
+  --popover: #ffffff;
+  --ink: #0f172a;
+  --ink-soft: rgba(15, 23, 42, 0.75);
+  --ink-mute: rgba(15, 23, 42, 0.65);
+  --rule: rgba(15, 23, 42, 0.1);
+  --hover: rgba(15, 23, 42, 0.06);
+  --stamp: #2563eb;
 
+  /* Status */
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+
+  /* Pastel stat-card fills */
+  --pastel-blue: #dbeafe;
+  --pastel-purple: #ede9fe;
+
+  /* Chart palette (SnowUI secondary) */
+  --c-primary: #0f172a;
+  --c-blue: #3b82f6;
+  --c-cyan: #06b6d4;
+  --c-mint: #10b981;
+  --c-purple: #8b5cf6;
+  --c-green: #22c55e;
+  --c-indigo: #6366f1;
+  --c-track: rgba(15, 23, 42, 0.08);
+
+  --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+
+  /* shadcn-style aliases */
   --background: var(--paper);
   --foreground: var(--ink);
-  --card: #ffffff;
   --card-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: var(--paper);
-  --secondary: var(--greenbar);
+  --primary: var(--stamp);
+  --primary-foreground: #ffffff;
+  --secondary: var(--rule);
   --secondary-foreground: var(--ink);
-  --muted: var(--greenbar);
+  --muted: var(--rule);
   --muted-foreground: var(--ink-soft);
   --accent: var(--stamp);
-  --accent-foreground: var(--paper);
-  --destructive: var(--stamp);
+  --accent-foreground: #ffffff;
+  --destructive: var(--danger);
   --border: var(--rule);
   --input: var(--rule);
   --ring: var(--stamp);
-  --radius: 0.25rem;
+  --radius: 0.75rem;
+
+  /* legacy accent aliases (kept for any older usages) */
+  --accent-blue: var(--c-blue);
+  --accent-purple: var(--c-purple);
+  --accent-green: var(--c-green);
+  --accent-red: var(--danger);
+  --accent-orange: var(--warning);
+  --accent-mint: var(--c-mint);
+  --accent-track: var(--c-track);
+}
+
+[data-theme="dark"] {
+  --paper: #0f172a;
+  --card: rgba(30, 41, 59, 0.5);
+  /* Solid surface that reads clearly above the dim dialog overlay, unlike the
+     translucent --card which nearly vanishes over a darkened backdrop. */
+  --popover: #1e293b;
+  --ink: #f1f5f9;
+  --ink-soft: rgba(241, 245, 249, 0.75);
+  --ink-mute: rgba(241, 245, 249, 0.65);
+  --rule: rgba(241, 245, 249, 0.12);
+  --hover: rgba(241, 245, 249, 0.08);
+  --stamp: #3b82f6;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --pastel-blue: rgba(59, 130, 246, 0.15);
+  --pastel-purple: rgba(139, 92, 246, 0.15);
+
+  --c-primary: #f1f5f9;
+  --c-blue: #60a5fa;
+  --c-cyan: #22d3ee;
+  --c-mint: #34d399;
+  --c-purple: #a78bfa;
+  --c-green: #4ade80;
+  --c-indigo: #818cf8;
+  --c-track: rgba(241, 245, 249, 0.1);
+
+  --card-shadow: none;
 }
 
 @theme inline {
@@ -34,6 +100,7 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -48,25 +115,132 @@
   --color-ring: var(--ring);
 
   --color-paper: var(--paper);
-  --color-greenbar: var(--greenbar);
-  --color-greenbar-strong: var(--greenbar-strong);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-ink-mute: var(--ink-mute);
   --color-rule: var(--rule);
+  --color-hover: var(--hover);
   --color-stamp: var(--stamp);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 
-  --font-sans: var(--font-plex-sans);
+  --color-pastel-blue: var(--pastel-blue);
+  --color-pastel-purple: var(--pastel-purple);
+
+  --color-c-primary: var(--c-primary);
+  --color-c-blue: var(--c-blue);
+  --color-c-cyan: var(--c-cyan);
+  --color-c-mint: var(--c-mint);
+  --color-c-purple: var(--c-purple);
+  --color-c-green: var(--c-green);
+  --color-c-indigo: var(--c-indigo);
+
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-green: var(--accent-green);
+  --color-accent-mint: var(--accent-mint);
+
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-plex-mono);
 
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-plex-sans), sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.theme-toggle-moon {
+  display: inline-flex;
+}
+.theme-toggle-sun {
+  display: none;
+}
+[data-theme="dark"] .theme-toggle-moon {
+  display: none;
+}
+[data-theme="dark"] .theme-toggle-sun {
+  display: inline-flex;
+}
+
+/* Animation definitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Global animation classes */
+.animate-in {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+.animate-in-stagger-1 { animation: fade-in-up 0.5s ease-out 0.1s both; }
+.animate-in-stagger-2 { animation: fade-in-up 0.5s ease-out 0.2s both; }
+.animate-in-stagger-3 { animation: fade-in-up 0.5s ease-out 0.3s both; }
+.animate-in-stagger-4 { animation: fade-in-up 0.5s ease-out 0.4s both; }
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

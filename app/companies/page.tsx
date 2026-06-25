@@ -1,13 +1,13 @@
 import { getCompanies, getCompanyFilterOptions } from "@/lib/data/companies";
 import { parseCompanyFilters, parsePage } from "@/lib/data/companies-search-params";
-import { Masthead } from "@/components/shared/masthead";
-import { SprocketRail } from "@/components/shared/sprocket-rail";
+import { AppShell } from "@/components/dashboard/app-shell";
+import { Topbar } from "@/components/dashboard/topbar";
 import { FilterSlip } from "@/components/companies/filter-slip";
 import { CompaniesTable } from "@/components/companies/companies-table";
+import { ExportButton } from "@/components/companies/export-button";
 import { Pagination } from "@/components/companies/pagination";
-import { Perforation } from "@/components/companies/perforation";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // Revalidate every hour
 
 const PAGE_SIZE = 50;
 
@@ -34,27 +34,18 @@ export default async function CompaniesPage({
   const exportHref = `/companies/export?${params.toString()}`;
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
-      <Masthead title="Companies Ledger" generatedAt={new Date()} />
+    <AppShell>
+      <Topbar section="Pages" page="Companies" />
 
-      <div className="flex flex-1 justify-center">
-        <SprocketRail className="border-r border-rule" />
-
-        <main className="flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10 md:px-10">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
+        <div className="flex w-full min-w-0 flex-col gap-6">
           <FilterSlip options={options} />
 
-          <Perforation />
-
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-mono text-sm font-semibold uppercase tracking-wide">
-              Manifest — {result.total.toLocaleString("en-US")} companies
+            <h2 className="text-sm font-semibold text-ink">
+              {result.total.toLocaleString("en-US")} companies
             </h2>
-            <a
-              href={exportHref}
-              className="border border-ink px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide text-ink transition-colors hover:bg-ink hover:text-paper"
-            >
-              Export CSV
-            </a>
+            <ExportButton href={exportHref} />
           </div>
 
           <CompaniesTable rows={result.rows} />
@@ -65,10 +56,8 @@ export default async function CompaniesPage({
             total={result.total}
             searchParams={params}
           />
-        </main>
-
-        <SprocketRail className="border-l border-rule" />
-      </div>
-    </div>
+        </div>
+      </main>
+    </AppShell>
   );
 }

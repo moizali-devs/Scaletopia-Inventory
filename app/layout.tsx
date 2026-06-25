@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { InlineScript } from "@/components/shared/inline-script";
+import { ToastContainer } from "@/components/shared/toast";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -27,9 +29,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+      data-theme="dark"
+      suppressHydrationWarning
+      className={`${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-paper text-ink flex flex-col">{children}</body>
+      <head>
+        <InlineScript
+          html={`(function(){try{var t=localStorage.getItem("theme");if(!t)t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`}
+        />
+      </head>
+      <body className="min-h-full bg-paper text-ink flex flex-col">
+        {children}
+        <ToastContainer />
+      </body>
     </html>
   );
 }

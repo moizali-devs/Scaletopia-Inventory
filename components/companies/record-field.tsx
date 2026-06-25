@@ -6,11 +6,8 @@ export function RecordField({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-3 py-1.5">
-      <span className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.15em] text-ink-soft">
-        {label}
-      </span>
-      <span aria-hidden className="flex-1 border-b border-dotted border-rule" style={{ marginBottom: "0.3em" }} />
+    <div className="flex items-baseline justify-between gap-3 border-b border-rule py-2.5 last:border-0">
+      <span className="text-sm text-ink-soft">{label}</span>
       <span className="text-right text-sm text-ink">{children}</span>
     </div>
   );

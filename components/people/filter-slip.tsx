@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Search } from "lucide-react";
 import { FilterChipGroup, type ChipOption } from "@/components/companies/filter-chip-group";
-import { Perforation } from "@/components/companies/perforation";
+import { FilterPopover } from "@/components/shared/filter-popover";
 import { SingleSelectGroup } from "@/components/people/single-select-group";
 import type { PersonFilterOptions } from "@/lib/data/people";
 
@@ -79,110 +80,96 @@ export function PeopleFilterSlip({ options }: { options: PersonFilterOptions }) 
   const toOptions = (entries: { id: string; label: string; count: number }[]): ChipOption[] =>
     entries.map((e) => ({ id: e.id, label: e.label, count: e.count }));
 
+  const presenceCount =
+    (searchParams.get("email") ? 1 : 0) + (searchParams.get("phone") ? 1 : 0);
+
   return (
-    <section className="border border-rule bg-card">
-      <div className="flex items-baseline justify-between gap-3 px-5 py-3">
-        <h2 className="font-mono text-sm font-semibold uppercase tracking-wide">
-          Requisition slip
-        </h2>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="font-mono text-[11px] uppercase tracking-wide text-stamp underline-offset-2 hover:underline"
-          >
-            Clear filters
-          </button>
-        )}
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative min-w-[220px] max-w-sm flex-1">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            commitText("q", e.target.value);
+          }}
+          placeholder="Search name or email"
+          className="w-full rounded-md border border-rule bg-card py-1.5 pl-8 pr-3 text-sm text-ink outline-none placeholder:text-ink-soft/70 focus:border-stamp"
+        />
       </div>
 
-      <Perforation />
+      <div className="min-w-[200px] flex-1">
+        <input
+          type="text"
+          value={jobTitle}
+          onChange={(e) => {
+            setJobTitle(e.target.value);
+            commitText("title", e.target.value);
+          }}
+          placeholder="Job title — founder, CEO, owner"
+          className="w-full rounded-md border border-rule bg-card py-1.5 px-3 text-sm text-ink outline-none placeholder:text-ink-soft/70 focus:border-stamp"
+        />
+      </div>
 
-      <div className="flex flex-col gap-5 px-5 py-4">
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="person-search"
-            className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft"
-          >
-            Search — name or email
-          </label>
-          <input
-            id="person-search"
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              commitText("q", e.target.value);
-            }}
-            placeholder="jane@acme.com"
-            className="border-0 border-b border-rule bg-transparent py-1 font-mono text-sm text-ink outline-none placeholder:text-ink-soft/60 focus:border-stamp"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="person-title"
-            className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft"
-          >
-            Job title — comma-separated terms
-          </label>
-          <input
-            id="person-title"
-            type="text"
-            value={jobTitle}
-            onChange={(e) => {
-              setJobTitle(e.target.value);
-              commitText("title", e.target.value);
-            }}
-            placeholder="founder, CEO, owner"
-            className="border-0 border-b border-rule bg-transparent py-1 font-mono text-sm text-ink outline-none placeholder:text-ink-soft/60 focus:border-stamp"
-          />
-        </div>
-
+      <FilterPopover label="Niche" count={getAll("niche").length}>
         <FilterChipGroup
           title="Niche"
           options={toOptions(options.niches)}
           selected={getAll("niche")}
           onToggle={(id) => toggle("niche", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Source" count={getAll("source").length}>
         <FilterChipGroup
           title="Source"
           options={toOptions(options.sources)}
           selected={getAll("source")}
           onToggle={(id) => toggle("source", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Country" count={getAll("country").length}>
         <FilterChipGroup
           title="Country"
           options={toOptions(options.countries)}
           selected={getAll("country")}
           onToggle={(id) => toggle("country", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Employee size" count={getAll("employee").length}>
         <FilterChipGroup
           title="Employee size"
           options={options.employeeBuckets.map((b) => ({ id: b.id, label: b.label }))}
           selected={getAll("employee")}
           onToggle={(id) => toggle("employee", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Industry" count={getAll("industry").length}>
         <FilterChipGroup
           title="Industry"
           options={toOptions(options.industries)}
           selected={getAll("industry")}
           onToggle={(id) => toggle("industry", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Email status" count={getAll("emailStatus").length}>
         <FilterChipGroup
           title="Email status"
           options={toOptions(options.emailStatuses)}
           selected={getAll("emailStatus")}
           onToggle={(id) => toggle("emailStatus", id)}
         />
+      </FilterPopover>
+      <FilterPopover label="Phone type" count={getAll("phoneType").length}>
         <FilterChipGroup
           title="Phone type"
           options={toOptions(options.phoneTypes)}
           selected={getAll("phoneType")}
           onToggle={(id) => toggle("phoneType", id)}
         />
-
-        <div className="flex flex-wrap gap-6">
+      </FilterPopover>
+      <FilterPopover label="Has contact info" count={presenceCount}>
+        <div className="flex flex-col gap-4">
           <SingleSelectGroup
             title="Email"
             value={searchParams.get("email") ?? "any"}
@@ -194,7 +181,17 @@ export function PeopleFilterSlip({ options }: { options: PersonFilterOptions }) 
             onChange={(id) => setSingleSelect("phone", id)}
           />
         </div>
-      </div>
-    </section>
+      </FilterPopover>
+
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={clearAll}
+          className="text-xs text-stamp underline-offset-2 hover:underline"
+        >
+          Clear filters
+        </button>
+      )}
+    </div>
   );
 }

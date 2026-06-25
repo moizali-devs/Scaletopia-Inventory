@@ -1,0 +1,22 @@
+export function ScaletopiaMark({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 13 71 43"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M0.0246582 56.0077H8.50768L15.6681 46.056L22.8531 56.0077H31.3484L15.6681 34.2882L0.0246582 56.0077Z"
+        fill="currentColor"
+      />
+      <path
+        d="M57.4487 21.9437L37.561 49.831H46.0217L62.7069 26.4348L63.8068 34.2391L70.6349 33.2831L67.8519 13.5448L48.0526 16.318L49.0127 23.125L57.4487 21.9437Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}

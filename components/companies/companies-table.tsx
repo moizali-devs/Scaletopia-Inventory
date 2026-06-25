@@ -31,21 +31,21 @@ const HEADERS = [
 export function CompaniesTable({ rows }: { rows: CompanyListRow[] }) {
   if (rows.length === 0) {
     return (
-      <div className="border border-dashed border-rule bg-card px-6 py-12 text-center font-mono text-sm text-ink-soft">
+      <div className="rounded-lg border border-dashed border-rule bg-card px-6 py-12 text-center text-sm text-ink-soft">
         No companies match these filters.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto border border-rule">
+    <div className="overflow-x-auto rounded-lg border border-rule">
       <table className="w-full min-w-[920px] border-collapse text-sm">
         <thead>
-          <tr className="bg-ink text-paper">
+          <tr className="border-b border-rule bg-card">
             {HEADERS.map((h) => (
               <th
                 key={h}
-                className="whitespace-nowrap px-3 py-2.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wide"
+                className="whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold text-ink-soft"
               >
                 {h}
               </th>
@@ -53,12 +53,12 @@ export function CompaniesTable({ rows }: { rows: CompanyListRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={row.id} className={cn(i % 2 === 1 && "bg-greenbar/60")}>
+          {rows.map((row) => (
+            <tr key={row.id} className="group border-b border-rule last:border-0">
               <td className="p-0">
                 <Link
                   href={`/companies/${row.id}`}
-                  className="block px-3 py-2.5 font-medium text-ink hover:bg-greenbar-strong"
+                  className="block px-3 py-2.5 font-medium text-ink group-hover:bg-rule/30"
                 >
                   {row.companyName ?? "—"}
                 </Link>
@@ -72,7 +72,7 @@ export function CompaniesTable({ rows }: { rows: CompanyListRow[] }) {
               <td className="p-0">
                 <Link
                   href={`/companies/${row.id}`}
-                  className="flex flex-wrap gap-1 px-3 py-2.5 hover:bg-greenbar-strong"
+                  className="flex flex-wrap gap-1 px-3 py-2.5 group-hover:bg-rule/30"
                 >
                   {row.sources.length > 0
                     ? row.sources.map((id) => <SourceChip key={id} id={id} />)
@@ -82,7 +82,7 @@ export function CompaniesTable({ rows }: { rows: CompanyListRow[] }) {
               <td className="p-0">
                 <Link
                   href={`/companies/${row.id}`}
-                  className="block px-3 py-2.5 hover:bg-greenbar-strong"
+                  className="block px-3 py-2.5 group-hover:bg-rule/30"
                 >
                   <QualityBadge tier={row.qualityTier} />
                 </Link>
@@ -112,7 +112,7 @@ function CompanyCell({
       <Link
         href={href}
         className={cn(
-          "block whitespace-nowrap px-3 py-2.5 text-ink hover:bg-greenbar-strong",
+          "block whitespace-nowrap px-3 py-2.5 text-ink group-hover:bg-rule/30",
           mono && "font-mono tabular-nums"
         )}
       >

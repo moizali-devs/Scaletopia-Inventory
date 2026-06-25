@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { fetchAllRows } from "@/lib/data/fetch-all-rows";
+import { withTtlCache } from "@/lib/data/cache-with-ttl";
 import { normalizeSourceTokens, sourceLabel } from "@/lib/data/source";
 import { normalizeCountry } from "@/lib/data/country";
 import { normalizeIndustry } from "@/lib/data/industry";
@@ -84,7 +85,7 @@ function employeeBucketOrClause(bucketIds: string[]): string {
  * then fetches the candidate set so Country/Industry/Source — whose raw
  * values have synonyms or casing variants the DB doesn't normalize — can be
  * matched in-app via the same normalizers used for Overview/display. */
-async function fetchFilteredRows(filters: CompanyListFilters): Promise<RawCompanyRow[]> {
+async function fetchFilteredRowsUncached(filters: CompanyListFilters): Promise<RawCompanyRow[]> {
   const search = filters.search?.trim();
 
   const rows = await fetchAllRows<RawCompanyRow>("companies", LIST_COLUMNS, (query) => {
@@ -119,6 +120,18 @@ async function fetchFilteredRows(filters: CompanyListFilters): Promise<RawCompan
     return true;
   });
 }
+
+/** The companies table is ~29k rows; fetching and re-filtering all of it from
+ * Supabase on every request (this page is force-dynamic) is the dominant cost
+ * on /companies. Data here is synced in batches (see the "Synced ... UTC"
+ * stamp in the UI), not edited live, so a short cross-request cache trades a
+ * little staleness for skipping that full-table round trip on every view. */
+const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 60_000);
+
+const fetchFilterOptionRows = withTtlCache(
+  () => fetchAllRows<RawCompanyRow>("companies", "niche,source,industry,country"),
+  60_000
+);
 
 function toListRow(row: RawCompanyRow): CompanyListRow {
   return {
@@ -159,10 +172,7 @@ export async function getAllFilteredCompanies(
 }
 
 export async function getCompanyFilterOptions(): Promise<CompanyFilterOptions> {
-  const rows = await fetchAllRows<RawCompanyRow>(
-    "companies",
-    "niche,source,industry,country"
-  );
+  const rows = await fetchFilterOptionRows();
 
   const niches = new Map<string, number>();
   const sources = new Map<string, number>();

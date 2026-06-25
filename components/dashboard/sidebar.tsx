@@ -1,0 +1,102 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Building2, ChevronRight, PieChart, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ScaletopiaLogo } from "@/components/shared/scaletopia-logo";
+
+const PAGES = [
+  { href: "/companies", label: "Companies", icon: Building2 },
+  { href: "/people", label: "People", icon: Users },
+];
+
+function isActive(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
+
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  caret,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  active: boolean;
+  caret?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-smooth",
+        active ? "bg-hover font-medium text-ink" : "text-ink-soft hover:bg-hover hover:text-ink hover:shadow-sm"
+      )}
+    >
+      {active ? (
+        <span className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-stamp" />
+      ) : null}
+      {caret ? <ChevronRight size={14} className="text-ink-mute" /> : <span className="w-[14px]" />}
+      <Icon size={16} className={active ? "text-stamp" : "text-ink-soft"} />
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
+
+/** Shared nav content rendered by both the static desktop rail (Sidebar) and
+ * the mobile drawer (MobileNav) so they can never drift out of sync. */
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+
+  return (
+    <>
+      <Link href="/" onClick={onNavigate} className="flex items-center border-b border-rule px-5 py-4">
+        <ScaletopiaLogo className="h-7 w-auto text-ink" />
+      </Link>
+
+      <div className="px-3 pt-2">
+        <p className="px-3 py-1 text-xs text-ink-mute">Dashboards</p>
+        <nav className="mt-1 flex flex-col gap-0.5">
+          <NavItem
+            href="/"
+            label="Overview"
+            icon={PieChart}
+            active={isActive(pathname, "/")}
+            onClick={onNavigate}
+          />
+        </nav>
+      </div>
+
+      <div className="px-3 pt-3">
+        <p className="px-3 py-1 text-xs text-ink-mute">Pages</p>
+        <nav className="mt-1 flex flex-col gap-0.5">
+          {PAGES.map((item) => (
+            <NavItem
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              href={item.href}
+              active={isActive(pathname, item.href)}
+              caret
+              onClick={onNavigate}
+            />
+          ))}
+        </nav>
+      </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="hidden w-[240px] shrink-0 flex-col border-r border-rule bg-card lg:flex">
+      <SidebarNav />
+    </aside>
+  );
+}

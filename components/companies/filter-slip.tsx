@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Search } from "lucide-react";
 import { FilterChipGroup, type ChipOption } from "@/components/companies/filter-chip-group";
-import { Perforation } from "@/components/companies/perforation";
+import { FilterPopover } from "@/components/shared/filter-popover";
 import type { CompanyFilterOptions } from "@/lib/data/companies";
 
 const MULTI_PARAMS = ["niche", "source", "industry", "employee", "country"] as const;
@@ -58,76 +59,73 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
     entries.map((e) => ({ id: e.id, label: e.label, count: e.count }));
 
   return (
-    <section className="border border-rule bg-card">
-      <div className="flex items-baseline justify-between gap-3 px-5 py-3">
-        <h2 className="font-mono text-sm font-semibold uppercase tracking-wide">
-          Requisition slip
-        </h2>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="font-mono text-[11px] uppercase tracking-wide text-stamp underline-offset-2 hover:underline"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
-
-      <Perforation />
-
-      <div className="flex flex-col gap-5 px-5 py-4">
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="company-search"
-            className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft"
-          >
-            Search — name or domain
-          </label>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px] max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
           <input
-            id="company-search"
             type="text"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               commitSearch(e.target.value);
             }}
-            placeholder="acme.com"
-            className="border-0 border-b border-rule bg-transparent py-1 font-mono text-sm text-ink outline-none placeholder:text-ink-soft/60 focus:border-stamp"
+            placeholder="Search name or domain"
+            className="w-full rounded-md border border-rule bg-card py-1.5 pl-8 pr-3 text-sm text-ink outline-none placeholder:text-ink-soft/70 focus:border-stamp"
           />
         </div>
 
-        <FilterChipGroup
-          title="Niche"
-          options={toOptions(options.niches)}
-          selected={getAll("niche")}
-          onToggle={(id) => toggle("niche", id)}
-        />
-        <FilterChipGroup
-          title="Source"
-          options={toOptions(options.sources)}
-          selected={getAll("source")}
-          onToggle={(id) => toggle("source", id)}
-        />
-        <FilterChipGroup
-          title="Industry"
-          options={toOptions(options.industries)}
-          selected={getAll("industry")}
-          onToggle={(id) => toggle("industry", id)}
-        />
-        <FilterChipGroup
-          title="Employee size"
-          options={options.employeeBuckets.map((b) => ({ id: b.id, label: b.label }))}
-          selected={getAll("employee")}
-          onToggle={(id) => toggle("employee", id)}
-        />
-        <FilterChipGroup
-          title="Country"
-          options={toOptions(options.countries)}
-          selected={getAll("country")}
-          onToggle={(id) => toggle("country", id)}
-        />
+        <FilterPopover label="Niche" count={getAll("niche").length}>
+          <FilterChipGroup
+            title="Niche"
+            options={toOptions(options.niches)}
+            selected={getAll("niche")}
+            onToggle={(id) => toggle("niche", id)}
+          />
+        </FilterPopover>
+        <FilterPopover label="Source" count={getAll("source").length}>
+          <FilterChipGroup
+            title="Source"
+            options={toOptions(options.sources)}
+            selected={getAll("source")}
+            onToggle={(id) => toggle("source", id)}
+          />
+        </FilterPopover>
+        <FilterPopover label="Industry" count={getAll("industry").length}>
+          <FilterChipGroup
+            title="Industry"
+            options={toOptions(options.industries)}
+            selected={getAll("industry")}
+            onToggle={(id) => toggle("industry", id)}
+          />
+        </FilterPopover>
+        <FilterPopover label="Employee size" count={getAll("employee").length}>
+          <FilterChipGroup
+            title="Employee size"
+            options={options.employeeBuckets.map((b) => ({ id: b.id, label: b.label }))}
+            selected={getAll("employee")}
+            onToggle={(id) => toggle("employee", id)}
+          />
+        </FilterPopover>
+        <FilterPopover label="Country" count={getAll("country").length}>
+          <FilterChipGroup
+            title="Country"
+            options={toOptions(options.countries)}
+            selected={getAll("country")}
+            onToggle={(id) => toggle("country", id)}
+          />
+        </FilterPopover>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs text-stamp underline-offset-2 hover:underline"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
-    </section>
+    </div>
   );
 }
