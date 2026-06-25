@@ -2,6 +2,7 @@ import { getDashboard } from "@/lib/data/dashboard";
 import { parseDashboardRange } from "@/lib/data/dashboard-search-params";
 import { AppShell } from "@/components/dashboard/app-shell";
 import { Topbar } from "@/components/dashboard/topbar";
+import { HeroMetrics } from "@/components/dashboard/hero-metrics";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { AreaChart } from "@/components/dashboard/area-chart";
 import { BarChart } from "@/components/dashboard/bar-chart";
@@ -32,39 +33,48 @@ export default async function OverviewPage({
     <AppShell>
       <Topbar section="Dashboards" page="Overview" />
 
-      <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
-        <div className="mx-auto flex w-full max-w-[920px] min-w-0 flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-ink">Overview</h1>
-            <DateRangePicker />
-          </div>
+      <main className="flex-1 overflow-x-hidden overflow-y-auto">
+        <HeroMetrics
+          totalCompanies={data.totalCompanies}
+          totalPeople={data.totalPeople}
+          niches={data.niches.length}
+          sources={data.sources.length}
+        />
 
-          <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <StatCard label="Companies" value={data.totalCompanies} variant="blue" />
-            <StatCard label="People" value={data.totalPeople} variant="plain" />
-            <StatCard label="Niches" value={data.niches.length} variant="plain" />
-            <StatCard label="Sources" value={data.sources.length} variant="purple" />
-          </section>
-
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <AreaChart
-                title="Catalog Distribution"
-                series={[
-                  { key: "niches", label: "By Niche", points: data.niches },
-                  { key: "sources", label: "By Source", points: data.sources },
-                ]}
-              />
+        <div className="px-5 py-6 md:px-7">
+          <div className="mx-auto flex w-full max-w-[920px] min-w-0 flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-lg font-semibold text-ink">Analytics</h1>
+              <DateRangePicker />
             </div>
-            <MiniBarList title="Sources" entries={data.sources} />
-          </section>
 
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <BarChart title="Top Industries" entries={data.industries} />
-            <DonutChart title="Geography" entries={data.countries} />
-          </section>
+            <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              <StatCard label="Companies" value={data.totalCompanies} variant="blue" />
+              <StatCard label="People" value={data.totalPeople} variant="plain" />
+              <StatCard label="Niches" value={data.niches.length} variant="plain" />
+              <StatCard label="Sources" value={data.sources.length} variant="purple" />
+            </section>
 
-          <RecentTable title="Recently Added Companies" rows={data.recentCompanies} now={now} />
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <AreaChart
+                  title="Catalog Distribution"
+                  series={[
+                    { key: "niches", label: "By Niche", points: data.niches },
+                    { key: "sources", label: "By Source", points: data.sources },
+                  ]}
+                />
+              </div>
+              <MiniBarList title="Sources" entries={data.sources} />
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <BarChart title="Top Industries" entries={data.industries} />
+              <DonutChart title="Geography" entries={data.countries} />
+            </section>
+
+            <RecentTable title="Recently Added Companies" rows={data.recentCompanies} now={now} />
+          </div>
         </div>
       </main>
     </AppShell>
