@@ -29,11 +29,11 @@ export default async function CompanyDetailPage({
 
       <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
         <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
-          <Link href="/companies" className="text-sm text-ink-soft hover:text-stamp">
-            &larr; Back to companies
+          <Link href="/companies" className="text-sm text-ink-soft hover:text-stamp animate-in animate-in-stagger-1">
+            ← Back to companies
           </Link>
 
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 animate-in animate-in-stagger-2">
             <div>
               <h1 className="text-2xl font-semibold text-ink">
                 {company.companyName ?? "Unnamed company"}
@@ -77,11 +77,13 @@ export default async function CompanyDetailPage({
           </div>
 
           {company.description && (
-            <p className="text-sm leading-relaxed text-ink-soft">{company.description}</p>
+            <p className="text-sm leading-relaxed text-ink-soft animate-in animate-in-stagger-2">
+              {company.description}
+            </p>
           )}
 
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+            <Card className="hover-lift animate-in animate-in-stagger-3">
               <CardHeader>
                 <CardTitle>Firmographics</CardTitle>
               </CardHeader>
@@ -99,7 +101,7 @@ export default async function CompanyDetailPage({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover-lift animate-in animate-in-stagger-4">
               <CardHeader>
                 <CardTitle>Contact</CardTitle>
               </CardHeader>
@@ -114,7 +116,7 @@ export default async function CompanyDetailPage({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover-lift animate-in animate-in-stagger-5">
               <CardHeader>
                 <CardTitle>Delivery</CardTitle>
               </CardHeader>
@@ -127,14 +129,14 @@ export default async function CompanyDetailPage({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover-lift animate-in animate-in-stagger-6">
               <CardHeader>
                 <CardTitle>Source</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {company.sources.length > 0 ? (
-                    company.sources.map((id) => <SourceChip key={id} id={id} />)
+                    company.sources.map((sId) => <SourceChip key={sId} id={sId} />)
                   ) : (
                     <span className="text-sm text-ink-soft">—</span>
                   )}
@@ -143,7 +145,7 @@ export default async function CompanyDetailPage({
             </Card>
           </div>
 
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-2 animate-in animate-in-stagger-4">
             <h2 className="text-sm font-semibold text-ink">Tags</h2>
             <div className="flex flex-wrap gap-2">
               {company.tags.length > 0 ? (
@@ -154,7 +156,7 @@ export default async function CompanyDetailPage({
             </div>
           </section>
 
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-2 animate-in animate-in-stagger-5">
             <h2 className="text-sm font-semibold text-ink">Enrichment data</h2>
             <EnrichmentList data={company.customData} />
           </section>

@@ -2,12 +2,35 @@
 
 import { Moon, Sun } from "lucide-react";
 
-function toggleTheme() {
-  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+function applyTheme(next: string) {
   document.documentElement.setAttribute("data-theme", next);
   try {
     localStorage.setItem("theme", next);
   } catch {}
+}
+
+function toggleTheme(event: React.MouseEvent<HTMLButtonElement>) {
+  const root = document.documentElement;
+  const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+
+  const supportsViewTransitions = typeof document.startViewTransition === "function";
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (!supportsViewTransitions || prefersReducedMotion) {
+    applyTheme(next);
+    return;
+  }
+
+  const { clientX, clientY } = event;
+  const maxRadius = Math.hypot(
+    Math.max(clientX, window.innerWidth - clientX),
+    Math.max(clientY, window.innerHeight - clientY)
+  );
+  root.style.setProperty("--theme-toggle-x", `${clientX}px`);
+  root.style.setProperty("--theme-toggle-y", `${clientY}px`);
+  root.style.setProperty("--theme-toggle-radius", `${maxRadius}px`);
+
+  document.startViewTransition(() => applyTheme(next));
 }
 
 export function ThemeToggle() {

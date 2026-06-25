@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { Building2, ChevronRight, PieChart, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScaletopiaLogo } from "@/components/shared/scaletopia-logo";
@@ -35,15 +36,27 @@ function NavItem({
       href={href}
       onClick={onClick}
       className={cn(
-        "relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-smooth",
-        active ? "bg-hover font-medium text-ink" : "text-ink-soft hover:bg-hover hover:text-ink hover:shadow-sm"
+        "relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all",
+        active
+          ? "bg-hover font-medium text-ink"
+          : "text-ink-soft hover:bg-hover hover:text-ink hover:shadow-sm hover:translate-x-0.5"
       )}
     >
       {active ? (
-        <span className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-stamp" />
+        <motion.span
+          layoutId="sidebar-active-indicator"
+          className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-stamp"
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
       ) : null}
       {caret ? <ChevronRight size={14} className="text-ink-mute" /> : <span className="w-[14px]" />}
-      <Icon size={16} className={active ? "text-stamp" : "text-ink-soft"} />
+      <motion.div
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      >
+        <Icon size={16} className={active ? "text-stamp" : "text-ink-soft"} />
+      </motion.div>
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -56,7 +69,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <Link href="/" onClick={onNavigate} className="flex items-center border-b border-rule px-5 py-4">
+      <Link href="/" onClick={onNavigate} className="flex items-center border-b border-rule px-5 py-4 hover:bg-hover/50 transition-colors">
         <ScaletopiaLogo className="h-7 w-auto text-ink" />
       </Link>
 

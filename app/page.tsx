@@ -2,7 +2,6 @@ import { getDashboard } from "@/lib/data/dashboard";
 import { parseDashboardRange } from "@/lib/data/dashboard-search-params";
 import { AppShell } from "@/components/dashboard/app-shell";
 import { Topbar } from "@/components/dashboard/topbar";
-import { HeroMetrics } from "@/components/dashboard/hero-metrics";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { AreaChart } from "@/components/dashboard/area-chart";
 import { BarChart } from "@/components/dashboard/bar-chart";
@@ -34,28 +33,29 @@ export default async function OverviewPage({
       <Topbar section="Dashboards" page="Overview" />
 
       <main className="flex-1 overflow-x-hidden overflow-y-auto">
-        <HeroMetrics
-          totalCompanies={data.totalCompanies}
-          totalPeople={data.totalPeople}
-          niches={data.niches.length}
-          sources={data.sources.length}
-        />
-
         <div className="px-5 py-6 md:px-7">
-          <div className="mx-auto flex w-full max-w-[920px] min-w-0 flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-ink">Analytics</h1>
-              <DateRangePicker />
+          <div className="mx-auto flex w-full max-w-[920px] min-w-0 flex-col gap-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-ink">Analytics Overview</h1>
+            <DateRangePicker />
+          </div>
+
+          {/* Key Metrics Section */}
+          <section className="space-y-3">
+            <p className="text-xs font-semibold text-ink-mute uppercase tracking-widest">Key Metrics</p>
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              <StatCard label="Companies" value={data.totalCompanies} variant="blue" icon="companies" />
+              <StatCard label="People" value={data.totalPeople} variant="plain" icon="people" />
+              <StatCard label="Niches" value={data.niches.length} variant="plain" icon="niches" />
+              <StatCard label="Sources" value={data.sources.length} variant="purple" icon="sources" />
             </div>
+          </section>
 
-            <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-              <StatCard label="Companies" value={data.totalCompanies} variant="blue" />
-              <StatCard label="People" value={data.totalPeople} variant="plain" />
-              <StatCard label="Niches" value={data.niches.length} variant="plain" />
-              <StatCard label="Sources" value={data.sources.length} variant="purple" />
-            </section>
-
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Data Distribution Section */}
+          <section className="space-y-3">
+            <p className="text-xs font-semibold text-ink-mute uppercase tracking-widest">Data Distribution</p>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <AreaChart
                   title="Catalog Distribution"
@@ -66,14 +66,23 @@ export default async function OverviewPage({
                 />
               </div>
               <MiniBarList title="Sources" entries={data.sources} />
-            </section>
+            </div>
+          </section>
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Breakdown Section */}
+          <section className="space-y-3">
+            <p className="text-xs font-semibold text-ink-mute uppercase tracking-widest">Market Breakdown</p>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <BarChart title="Top Industries" entries={data.industries} />
               <DonutChart title="Geography" entries={data.countries} />
-            </section>
+            </div>
+          </section>
 
+          {/* Recent Activity Section */}
+          <section className="space-y-3">
+            <p className="text-xs font-semibold text-ink-mute uppercase tracking-widest">Recent Activity</p>
             <RecentTable title="Recently Added Companies" rows={data.recentCompanies} now={now} />
+          </section>
           </div>
         </div>
       </main>

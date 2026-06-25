@@ -39,23 +39,29 @@ export default async function CompaniesPage({
 
       <main className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 md:px-7">
         <div className="flex w-full min-w-0 flex-col gap-6">
-          <FilterSlip options={options} />
+          <div className="animate-in animate-in-stagger-1">
+            <FilterSlip options={options} />
+          </div>
 
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex items-baseline justify-between gap-3 animate-in animate-in-stagger-2">
             <h2 className="text-sm font-semibold text-ink">
               {result.total.toLocaleString("en-US")} companies
             </h2>
             <ExportButton href={exportHref} />
           </div>
 
-          <CompaniesTable rows={result.rows} />
+          <div className="animate-in animate-in-stagger-3">
+            <CompaniesTable rows={result.rows} />
+          </div>
 
-          <Pagination
-            page={result.page}
-            pageSize={result.pageSize}
-            total={result.total}
-            searchParams={params}
-          />
+          <div className="animate-in animate-in-stagger-4">
+            <Pagination
+              page={result.page}
+              pageSize={result.pageSize}
+              total={result.total}
+              searchParams={params}
+            />
+          </div>
         </div>
       </main>
     </AppShell>
