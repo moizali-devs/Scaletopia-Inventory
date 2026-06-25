@@ -10,12 +10,11 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 export function RecentTable({
   title,
   rows,
-  now,
 }: {
   title: string;
   rows: RecentCompany[];
-  now: Date;
 }) {
+  const now = new Date();
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-20px" });
 

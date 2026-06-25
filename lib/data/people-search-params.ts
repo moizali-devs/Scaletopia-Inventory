@@ -7,6 +7,8 @@ function asSingleSelect(value: string | null): SingleSelectFilter | undefined {
 /** Shared between the People page (server-rendered searchParams) and the
  * CSV export route (URL query string) so both read filters identically. */
 export function parsePersonFilters(searchParams: URLSearchParams): PersonListFilters {
+  const empMin = searchParams.get("empmin");
+  const empMax = searchParams.get("empmax");
   return {
     search: searchParams.get("q") ?? undefined,
     niche: searchParams.getAll("niche"),
@@ -19,5 +21,7 @@ export function parsePersonFilters(searchParams: URLSearchParams): PersonListFil
     emailStatus: searchParams.getAll("emailStatus"),
     phoneType: searchParams.getAll("phoneType"),
     jobTitle: searchParams.get("title") ?? undefined,
+    employeeMin: Number.isFinite(Number(empMin)) && empMin ? Number(empMin) : undefined,
+    employeeMax: Number.isFinite(Number(empMax)) && empMax ? Number(empMax) : undefined,
   };
 }

@@ -14,7 +14,7 @@ function formatLastUpdated(value: string | null): string {
 }
 
 function locationOf(row: CompanyListRow): string {
-  return [row.city, row.country].filter(Boolean).join(", ") || "—";
+  return [row.city, row.state, row.country].filter(Boolean).join(", ") || "—";
 }
 
 const HEADERS = [

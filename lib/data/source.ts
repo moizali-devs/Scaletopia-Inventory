@@ -1,3 +1,5 @@
+import { humanizeSlug } from "@/lib/utils";
+
 // Raw source tokens, enumerated from live data (see docs/DB-Findings.md):
 //   companies (comma-separated): aiark-api, blitz-api, apollo, apollo-scraped, store-leads
 //   people (&-separated):        aiark-people, blitz-people, "Ai Ark", "blitz", clay-people
@@ -37,5 +39,5 @@ export function normalizeSourceTokens(raw: string | null | undefined): string[] 
 }
 
 export function sourceLabel(canonicalId: string): string {
-  return CANONICAL_LABELS[canonicalId] ?? canonicalId;
+  return CANONICAL_LABELS[canonicalId] ?? humanizeSlug(canonicalId);
 }

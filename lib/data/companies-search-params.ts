@@ -3,14 +3,17 @@ import type { CompanyListFilters } from "@/lib/data/companies";
 /** Shared between the Companies page (server-rendered searchParams) and the
  * CSV export route (URL query string) so both read filters identically. */
 export function parseCompanyFilters(searchParams: URLSearchParams): CompanyListFilters {
-  const search = searchParams.get("q") ?? undefined;
+  const empMin = searchParams.get("empmin");
+  const empMax = searchParams.get("empmax");
   return {
-    search,
+    search: searchParams.get("q") ?? undefined,
     niche: searchParams.getAll("niche"),
     source: searchParams.getAll("source"),
     industry: searchParams.getAll("industry"),
     employeeBucket: searchParams.getAll("employee"),
     country: searchParams.getAll("country"),
+    employeeMin: Number.isFinite(Number(empMin)) && empMin ? Number(empMin) : undefined,
+    employeeMax: Number.isFinite(Number(empMax)) && empMax ? Number(empMax) : undefined,
   };
 }
 

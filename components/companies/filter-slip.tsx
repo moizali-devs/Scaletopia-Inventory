@@ -8,6 +8,7 @@ import { FilterPopover } from "@/components/shared/filter-popover";
 import type { CompanyFilterOptions } from "@/lib/data/companies";
 
 const MULTI_PARAMS = ["niche", "source", "industry", "employee", "country"] as const;
+const SINGLE_PARAMS = ["q", "empmin", "empmax"] as const;
 
 export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
   const router = useRouter();
@@ -15,6 +16,8 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [empMin, setEmpMin] = useState(searchParams.get("empmin") ?? "");
+  const [empMax, setEmpMax] = useState(searchParams.get("empmax") ?? "");
 
   function getAll(param: string): string[] {
     return searchParams.getAll(param);
@@ -25,7 +28,7 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
     mutate(params);
     params.delete("page");
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }
 
@@ -45,15 +48,31 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
     });
   }
 
+  function commitCustomRange(min: string, max: string) {
+    navigate((params) => {
+      if (min.trim()) params.set("empmin", min.trim());
+      else params.delete("empmin");
+      if (max.trim()) params.set("empmax", max.trim());
+      else params.delete("empmax");
+      // clear bucket selection when custom range is used
+      if (min.trim() || max.trim()) params.delete("employee");
+    });
+  }
+
   function clearAll() {
     setSearch("");
+    setEmpMin("");
+    setEmpMax("");
     startTransition(() => {
       router.push(pathname, { scroll: false });
     });
   }
 
   const hasActiveFilters =
-    Boolean(searchParams.get("q")) || MULTI_PARAMS.some((p) => searchParams.getAll(p).length > 0);
+    Boolean(searchParams.get("q")) ||
+    Boolean(searchParams.get("empmin")) ||
+    Boolean(searchParams.get("empmax")) ||
+    MULTI_PARAMS.some((p) => searchParams.getAll(p).length > 0);
 
   const toOptions = (entries: { id: string; label: string; count: number }[]): ChipOption[] =>
     entries.map((e) => ({ id: e.id, label: e.label, count: e.count }));
@@ -99,13 +118,52 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
             onToggle={(id) => toggle("industry", id)}
           />
         </FilterPopover>
-        <FilterPopover label="Employee size" count={getAll("employee").length}>
+        <FilterPopover label="Employee size" count={getAll("employee").length + (searchParams.get("empmin") || searchParams.get("empmax") ? 1 : 0)}>
           <FilterChipGroup
             title="Employee size"
             options={options.employeeBuckets.map((b) => ({ id: b.id, label: b.label }))}
             selected={getAll("employee")}
-            onToggle={(id) => toggle("employee", id)}
+            onToggle={(id) => {
+              setEmpMin("");
+              setEmpMax("");
+              navigate((params) => {
+                params.delete("empmin");
+                params.delete("empmax");
+                const current = params.getAll("employee");
+                params.delete("employee");
+                const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
+                for (const value of next) params.append("employee", value);
+              });
+            }}
           />
+          <div className="mt-3 border-t border-rule pt-3">
+            <p className="mb-2 text-xs font-medium text-ink-mute">Custom range</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                placeholder="Min"
+                value={empMin}
+                onChange={(e) => {
+                  setEmpMin(e.target.value);
+                  commitCustomRange(e.target.value, empMax);
+                }}
+                className="w-20 rounded border border-rule bg-card px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-mute focus:border-stamp"
+              />
+              <span className="text-xs text-ink-mute">–</span>
+              <input
+                type="number"
+                min={0}
+                placeholder="Max"
+                value={empMax}
+                onChange={(e) => {
+                  setEmpMax(e.target.value);
+                  commitCustomRange(empMin, e.target.value);
+                }}
+                className="w-20 rounded border border-rule bg-card px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-mute focus:border-stamp"
+              />
+            </div>
+          </div>
         </FilterPopover>
         <FilterPopover label="Country" count={getAll("country").length}>
           <FilterChipGroup
@@ -116,15 +174,14 @@ export function FilterSlip({ options }: { options: CompanyFilterOptions }) {
           />
         </FilterPopover>
 
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-xs text-stamp underline-offset-2 hover:underline"
-          >
-            Clear filters
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={clearAll}
+          disabled={!hasActiveFilters}
+          className="text-xs text-stamp underline-offset-2 hover:underline disabled:opacity-30 disabled:cursor-not-allowed disabled:no-underline"
+        >
+          Clear all
+        </button>
       </div>
     </div>
   );
