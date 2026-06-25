@@ -124,13 +124,15 @@ async function fetchFilteredRowsUncached(filters: CompanyListFilters): Promise<R
 /** The companies table is ~29k rows; fetching and re-filtering all of it from
  * Supabase on every request (this page is force-dynamic) is the dominant cost
  * on /companies. Data here is synced in batches (see the "Synced ... UTC"
- * stamp in the UI), not edited live, so a short cross-request cache trades a
- * little staleness for skipping that full-table round trip on every view. */
-const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 60_000);
+ * stamp in the UI), not edited live, so a cross-request cache trades a little
+ * staleness for skipping that full-table round trip on every view. TTL
+ * matches the page's own `revalidate = 3600`, since that's the staleness
+ * window already accepted at the page level. */
+const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 3_600_000);
 
 const fetchFilterOptionRows = withTtlCache(
   () => fetchAllRows<RawCompanyRow>("companies", "niche,source,industry,country"),
-  60_000
+  3_600_000
 );
 
 function toListRow(row: RawCompanyRow): CompanyListRow {

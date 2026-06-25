@@ -95,7 +95,8 @@ interface CompanyJoinData {
 /** The companies table is ~29k rows; both getPeople and getPersonFilterOptions
  * need this join per request, and it's identical across requests until the
  * next sync, so it's cached the same way as the companies filter-option rows
- * (see companies.ts) rather than re-fetched from Supabase every time. */
+ * (see companies.ts) rather than re-fetched from Supabase every time. TTL
+ * matches the page's own `revalidate = 3600`. */
 const fetchCompanyJoinRows = withTtlCache(
   () =>
     fetchAllRows<{
@@ -105,7 +106,7 @@ const fetchCompanyJoinRows = withTtlCache(
       industry: string | null;
       client: string | null;
     }>("companies", "id,niche,employee_count,industry,client"),
-  60_000
+  3_600_000
 );
 
 /** Companies have native niche/employee_count/industry columns people lack on
@@ -196,9 +197,9 @@ async function fetchFilteredRowsUncached(filters: PersonListFilters): Promise<Ra
 /** The people table dwarfs companies; re-fetching and re-filtering it from
  * Supabase on every request (this page is force-dynamic) is the dominant
  * cost on /people, same as companies.ts. Cached per unique filter
- * combination, short TTL — see the companies.ts comment for why that's safe
- * for this synced-in-batches dataset. */
-const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 60_000);
+ * combination — see the companies.ts comment for why a TTL matching the
+ * page's `revalidate` window is safe for this synced-in-batches dataset. */
+const fetchFilteredRows = withTtlCache(fetchFilteredRowsUncached, 3_600_000);
 
 /** Applies the company-join-dependent filters (industry, employee size,
  * niche) that fetchFilteredRows can't cache on its own, since they depend on
@@ -291,7 +292,7 @@ const fetchPersonFilterOptionRows = withTtlCache(
       email_status: string | null;
       phone_type: string | null;
     }>("people", "company_id,source,country,tags,email_status,phone_type"),
-  60_000
+  3_600_000
 );
 
 export async function getPersonFilterOptions(): Promise<PersonFilterOptions> {
