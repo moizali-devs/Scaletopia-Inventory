@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   /* Traditional AMOLED-style dark mode surfaces */
   --paper: #000000;
