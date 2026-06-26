@@ -1,36 +1,49 @@
-# Scaletopia Inventory
+```
+███████╗ ██████╗ █████╗ ██╗     ███████╗████████╗ ██████╗ ██████╗ ██╗ █████╗
+██╔════╝██╔════╝██╔══██╗██║     ██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██║██╔══██╗
+███████╗██║     ███████║██║     █████╗     ██║   ██║   ██║██████╔╝██║███████║
+╚════██║██║     ██╔══██║██║     ██╔══╝     ██║   ██║   ██║██╔═══╝ ██║██╔══██║
+███████║╚██████╗██║  ██║███████╗███████╗   ██║   ╚██████╔╝██║     ██║██║  ██║
+╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝
+                                                              INVENTORY
+```
 
-Internal dashboard for browsing and filtering Scaletopia's companies and people database.
+> Internal dashboard for browsing, filtering, and exporting Scaletopia's companies and people database.
 
-## Stack
+---
 
-- **Next.js** — App Router, Server Components, ISR
-- **TypeScript** — end-to-end type safety
-- **Tailwind CSS** — utility-first styling
-- **Supabase** — PostgreSQL backend
+### Stack
 
-## Getting Started
+| | |
+|---|---|
+| `Next.js` | App Router · Server Components · ISR |
+| `TypeScript` | End-to-end type safety |
+| `Tailwind CSS` | Utility-first styling |
+| `Supabase` | PostgreSQL backend |
+
+---
+
+### Getting Started
 
 ```bash
 npm install
-cp .env.example .env.local   # add your Supabase credentials
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-## Environment Variables
-
 ```env
+# .env.local
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Scripts
+---
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run test` | Run test suite |
-| `npm run lint` | Run ESLint |
+### Scripts
+
+```
+dev      → start development server      npm run dev
+build    → production build              npm run build
+test     → run test suite                npm run test
+lint     → run ESLint                    npm run lint
+```
