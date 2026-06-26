@@ -28,17 +28,30 @@ const EMPTY: PersonFilterOptions = {
   phoneTypes: [],
 };
 
+let cached: PersonFilterOptions | null = null;
+let inflight: Promise<PersonFilterOptions> | null = null;
+
+function getOptions(): Promise<PersonFilterOptions> {
+  if (cached) return Promise.resolve(cached);
+  if (inflight) return inflight;
+  inflight = fetch("/api/people/filter-options")
+    .then((r) => {
+      if (!r.ok) throw new Error(r.status.toString());
+      return r.json() as Promise<PersonFilterOptions>;
+    })
+    .then((data) => {
+      cached = data;
+      return data;
+    });
+  return inflight;
+}
+
 export function PeopleFilterSlipClient() {
-  const [options, setOptions] = useState<PersonFilterOptions>(EMPTY);
+  const [options, setOptions] = useState<PersonFilterOptions>(cached ?? EMPTY);
 
   useEffect(() => {
-    fetch("/api/people/filter-options")
-      .then((r) => {
-        if (!r.ok) throw new Error(r.status.toString());
-        return r.json();
-      })
-      .then((data: PersonFilterOptions) => setOptions(data))
-      .catch(() => {});
+    if (cached) return;
+    getOptions().then(setOptions).catch(() => {});
   }, []);
 
   return <PeopleFilterSlip options={options} />;

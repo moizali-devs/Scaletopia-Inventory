@@ -8,11 +8,14 @@ import { Pagination } from "@/components/companies/pagination";
 import { ExportButton } from "@/components/people/export-button";
 import { SkeletonTable } from "@/components/shared/skeleton-loaders";
 
+const cache = new Map<string, PersonListResult>();
+
 export function PeopleResultsClient() {
   const searchParams = useSearchParams();
   const paramsStr = searchParams.toString();
-  const [result, setResult] = useState<PersonListResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const hit = cache.get(paramsStr) ?? null;
+  const [result, setResult] = useState<PersonListResult | null>(hit);
+  const [loading, setLoading] = useState(hit === null);
   const [error, setError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -21,14 +24,22 @@ export function PeopleResultsClient() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError(false);
+    const cached = cache.get(paramsStr);
+    if (cached) {
+      setResult(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError(false);
+    }
+
     fetch(`/api/people/results?${paramsStr}`, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json();
       })
       .then((data: PersonListResult) => {
+        cache.set(paramsStr, data);
         setResult(data);
         setLoading(false);
       })

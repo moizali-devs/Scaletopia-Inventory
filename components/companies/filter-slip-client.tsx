@@ -25,17 +25,30 @@ const EMPTY: CompanyFilterOptions = {
   employeeBuckets: [],
 };
 
+let cached: CompanyFilterOptions | null = null;
+let inflight: Promise<CompanyFilterOptions> | null = null;
+
+function getOptions(): Promise<CompanyFilterOptions> {
+  if (cached) return Promise.resolve(cached);
+  if (inflight) return inflight;
+  inflight = fetch("/api/companies/filter-options")
+    .then((r) => {
+      if (!r.ok) throw new Error(r.status.toString());
+      return r.json() as Promise<CompanyFilterOptions>;
+    })
+    .then((data) => {
+      cached = data;
+      return data;
+    });
+  return inflight;
+}
+
 export function FilterSlipClient() {
-  const [options, setOptions] = useState<CompanyFilterOptions>(EMPTY);
+  const [options, setOptions] = useState<CompanyFilterOptions>(cached ?? EMPTY);
 
   useEffect(() => {
-    fetch("/api/companies/filter-options")
-      .then((r) => {
-        if (!r.ok) throw new Error(r.status.toString());
-        return r.json();
-      })
-      .then((data: CompanyFilterOptions) => setOptions(data))
-      .catch(() => {});
+    if (cached) return;
+    getOptions().then(setOptions).catch(() => {});
   }, []);
 
   return <FilterSlip options={options} />;
