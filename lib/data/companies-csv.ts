@@ -4,9 +4,15 @@ import { getAllFilteredCompanies } from "@/lib/data/companies";
 const HEADERS = [
   "Company Name",
   "Domain",
+  "Website URL",
+  "LinkedIn URL",
+  "Niche",
   "Industry",
   "Employees",
-  "Location",
+  "City",
+  "State",
+  "Country",
+  "Phone",
   "Source",
   "Quality Tier",
   "Last Updated",
@@ -19,17 +25,19 @@ function csvCell(value: string): string {
   return value;
 }
 
-function locationOf(row: CompanyListRow): string {
-  return [row.city, row.country].filter(Boolean).join(", ");
-}
-
 function toCsvRow(row: CompanyListRow): string {
   return [
     row.companyName ?? "",
     row.domain ?? "",
+    row.websiteUrl ?? "",
+    row.linkedinUrl ?? "",
+    row.niche ?? "",
     row.industry ?? "",
     row.employeeCount?.toString() ?? "",
-    locationOf(row),
+    row.city ?? "",
+    row.state ?? "",
+    row.country ?? "",
+    row.phone ?? "",
     row.sources.join(", "),
     row.qualityTier ?? "",
     row.lastUpdated ?? "",

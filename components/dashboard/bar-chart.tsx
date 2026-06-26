@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useInView } from "framer-motion";
 import { humanizeSlug } from "@/lib/utils";
 import type { BreakdownEntry } from "@/lib/data/dashboard";
@@ -33,15 +34,18 @@ export function BarChart({
   title,
   entries,
   limit = 6,
+  filterParam,
 }: {
   title: string;
   entries: BreakdownEntry[];
   limit?: number;
+  filterParam?: string;
 }) {
   const top = entries.slice(0, limit);
   const max = Math.max(1, ...top.map((e) => e.count));
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-20px" });
+  const router = useRouter();
 
   return (
     <Card
@@ -56,8 +60,14 @@ export function BarChart({
           {top.map((entry, i) => {
             const heightPct = Math.max(4, (entry.count / max) * 100);
             const isTop = i === 0;
+            const clickable = !!filterParam;
             return (
-              <div key={entry.id} className="flex min-w-0 flex-1 flex-col items-center gap-2 group">
+              <div
+                key={entry.id}
+                className={`flex min-w-0 flex-1 flex-col items-center gap-2 group${clickable ? " cursor-pointer" : ""}`}
+                onClick={clickable ? () => router.push(`/companies?${filterParam}=${encodeURIComponent(entry.id)}`) : undefined}
+                title={clickable ? `Filter by ${humanizeSlug(entry.label)}` : undefined}
+              >
                 <div
                   className="relative h-[150px] w-full"
                   title={`${entry.count.toLocaleString("en-US")}`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useInView } from "framer-motion";
 import { humanizeSlug } from "@/lib/utils";
 import type { BreakdownEntry } from "@/lib/data/dashboard";
@@ -19,15 +20,18 @@ export function MiniBarList({
   title,
   entries,
   limit = 6,
+  filterParam,
 }: {
   title: string;
   entries: BreakdownEntry[];
   limit?: number;
+  filterParam?: string;
 }) {
   const top = entries.slice(0, limit);
   const max = Math.max(1, ...top.map((e) => e.count));
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-20px" });
+  const router = useRouter();
 
   return (
     <Card
@@ -42,10 +46,12 @@ export function MiniBarList({
           {top.map((entry, i) => (
             <motion.li
               key={entry.id}
-              className="flex items-center gap-3 text-[13px]"
+              className={`flex items-center gap-3 text-[13px]${filterParam ? " cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
               initial={{ opacity: 0, x: -8 }}
               animate={isInView ? { opacity: 1, x: 0 } : {}}
               transition={{ delay: 0.1 + i * 0.06, duration: 0.3 }}
+              onClick={filterParam ? () => router.push(`/companies?${filterParam}=${encodeURIComponent(entry.id)}`) : undefined}
+              title={filterParam ? `Filter by ${humanizeSlug(entry.label)}` : undefined}
             >
               <span className="w-20 shrink-0 truncate text-ink">{humanizeSlug(entry.label)}</span>
               <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-c-track">

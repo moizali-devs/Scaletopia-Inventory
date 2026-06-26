@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "radix-ui";
-import { Building2, Download, PieChart, Search, Users } from "lucide-react";
+import { Building2, Download, Filter, PieChart, Search, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SearchResults } from "@/lib/data/search";
 
-type Group = "Companies" | "People" | "Commands";
+type Group = "Companies" | "People" | "Commands" | "Niches";
+
+interface NicheOption {
+  id: string;
+  label: string;
+}
 
 interface PaletteItem {
   key: string;
@@ -52,6 +57,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
+  const [niches, setNiches] = useState<NicheOption[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +85,14 @@ export function CommandPalette() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!open || niches.length > 0) return;
+    fetch("/api/niches")
+      .then((res) => res.json())
+      .then((data: { niches: NicheOption[] }) => setNiches(data.niches))
+      .catch(() => {});
+  }, [open, niches.length]);
 
   useEffect(() => {
     const term = query.trim();
@@ -118,9 +132,18 @@ export function CommandPalette() {
     const commandItems: PaletteItem[] = COMMANDS.filter((c) =>
       term ? c.label.toLowerCase().includes(term) : true
     ).map((c) => ({ ...c, group: "Commands" }));
+    const nicheItems: PaletteItem[] = niches
+      .filter((n) => !term || n.label.toLowerCase().includes(term))
+      .map((n) => ({
+        key: `niche-${n.id}`,
+        group: "Niches" as Group,
+        label: n.label,
+        icon: Filter,
+        perform: (r) => r.push(`/companies?niche=${encodeURIComponent(n.id)}`),
+      }));
 
-    return [...companyItems, ...peopleItems, ...commandItems];
-  }, [results, query]);
+    return [...companyItems, ...peopleItems, ...nicheItems, ...commandItems];
+  }, [results, query, niches]);
 
   function select(item: PaletteItem) {
     item.perform(router);
@@ -182,7 +205,7 @@ export function CommandPalette() {
                 if (!next.trim()) setResults(EMPTY_RESULTS);
               }}
               onKeyDown={onInputKeyDown}
-              placeholder="Search companies, people, or run a command…"
+              placeholder="Search companies, people, niches, or run a command…"
               className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
             />
             <kbd className="rounded border border-rule px-1.5 py-0.5 text-[11px] text-ink-mute">

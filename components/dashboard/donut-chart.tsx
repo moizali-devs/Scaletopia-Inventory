@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { humanizeSlug } from "@/lib/utils";
 import type { BreakdownEntry } from "@/lib/data/dashboard";
@@ -30,10 +31,12 @@ export function DonutChart({
   title,
   entries,
   limit = 5,
+  filterParam,
 }: {
   title: string;
   entries: BreakdownEntry[];
   limit?: number;
+  filterParam?: string;
 }) {
   const top = entries.slice(0, limit);
   const rest = entries.slice(limit).reduce((s, e) => s + e.count, 0);
@@ -58,6 +61,7 @@ export function DonutChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-20px" });
   const [hovered, setHovered] = useState<HoveredSegment | null>(null);
+  const router = useRouter();
 
   return (
     <Card
@@ -93,7 +97,8 @@ export function DonutChart({
                   })
                 }
                 onMouseLeave={() => setHovered(null)}
-                style={{ cursor: "pointer" }}
+                onClick={filterParam && s.id !== "other" ? () => router.push(`/companies?${filterParam}=${encodeURIComponent(s.id)}`) : undefined}
+                style={{ cursor: filterParam && s.id !== "other" ? "pointer" : "default" }}
               >
                 <motion.circle
                   cx="50"
@@ -157,7 +162,7 @@ export function DonutChart({
           {segments.map((s, i) => (
             <motion.li
               key={s.id}
-              className="flex items-center gap-2 text-[13px] group cursor-pointer"
+              className={`flex items-center gap-2 text-[13px] group${filterParam && s.id !== "other" ? " cursor-pointer" : ""}`}
               initial={{ opacity: 0, x: 8 }}
               animate={isInView ? { opacity: 1, x: 0 } : {}}
               transition={{ delay: 0.4 + i * 0.06 }}
@@ -165,6 +170,8 @@ export function DonutChart({
                 setHovered({ id: s.id, label: s.label, pct: s.pct, count: s.count, color: s.color })
               }
               onMouseLeave={() => setHovered(null)}
+              onClick={filterParam && s.id !== "other" ? () => router.push(`/companies?${filterParam}=${encodeURIComponent(s.id)}`) : undefined}
+              title={filterParam && s.id !== "other" ? `Filter by ${humanizeSlug(s.label)}` : undefined}
             >
               <motion.span
                 className={`shrink-0 rounded-full transition-all`}

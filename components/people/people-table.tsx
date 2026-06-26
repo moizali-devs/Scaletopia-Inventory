@@ -80,7 +80,9 @@ export function PeopleTable({ rows }: { rows: PersonListRow[] }) {
                 </Link>
               </td>
               <PersonCell href={`/people/${row.id}`}>{row.companyName ?? "—"}</PersonCell>
-              <PersonCell href={`/people/${row.id}`}>{row.country ?? "—"}</PersonCell>
+              <PersonCell href={`/people/${row.id}`}>
+                {[row.city, row.country].filter(Boolean).join(", ") || "—"}
+              </PersonCell>
               <td className="p-0">
                 <Link
                   href={`/people/${row.id}`}

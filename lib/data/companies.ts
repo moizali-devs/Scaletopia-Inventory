@@ -15,16 +15,23 @@ export interface CompanyListFilters {
   industry?: string[];
   employeeBucket?: string[];
   country?: string[];
+  employeeMin?: number;
+  employeeMax?: number;
 }
 
 export interface CompanyListRow {
   id: string;
   companyName: string | null;
   domain: string | null;
+  websiteUrl: string | null;
+  linkedinUrl: string | null;
   industry: string | null;
   employeeCount: number | null;
   city: string | null;
+  state: string | null;
   country: string | null;
+  phone: string | null;
+  niche: string | null;
   sources: string[];
   qualityTier: string | null;
   lastUpdated: string | null;
@@ -55,11 +62,14 @@ interface RawCompanyRow {
   id: string;
   company_name: string | null;
   domain: string | null;
+  website_url: string | null;
+  linkedin_url: string | null;
   industry: string | null;
   employee_count: number | null;
   city: string | null;
   state: string | null;
   country: string | null;
+  phone: string | null;
   source: string | null;
   niche: string | null;
   quality_tier: string | null;
@@ -67,7 +77,7 @@ interface RawCompanyRow {
 }
 
 const LIST_COLUMNS =
-  "id,company_name,domain,industry,employee_count,city,state,country,source,niche,quality_tier,last_updated";
+  "id,company_name,domain,website_url,linkedin_url,industry,employee_count,city,state,country,phone,source,niche,quality_tier,last_updated";
 
 function employeeBucketOrClause(bucketIds: string[]): string {
   const buckets = EMPLOYEE_BUCKETS.filter((b) => bucketIds.includes(b.id));
@@ -97,7 +107,10 @@ async function fetchFilteredRowsUncached(filters: CompanyListFilters): Promise<R
     if (filters.niche?.length) {
       q = q.in("niche", filters.niche);
     }
-    if (filters.employeeBucket?.length) {
+    if (filters.employeeMin != null || filters.employeeMax != null) {
+      if (filters.employeeMin != null) q = q.gte("employee_count", filters.employeeMin);
+      if (filters.employeeMax != null) q = q.lte("employee_count", filters.employeeMax);
+    } else if (filters.employeeBucket?.length) {
       const clause = employeeBucketOrClause(filters.employeeBucket);
       if (clause) q = q.or(clause);
     }
@@ -140,10 +153,15 @@ function toListRow(row: RawCompanyRow): CompanyListRow {
     id: row.id,
     companyName: row.company_name,
     domain: row.domain,
+    websiteUrl: row.website_url,
+    linkedinUrl: row.linkedin_url,
     industry: row.industry,
     employeeCount: row.employee_count,
     city: row.city,
+    state: row.state,
     country: row.country,
+    phone: row.phone,
+    niche: row.niche,
     sources: normalizeSourceTokens(row.source),
     qualityTier: row.quality_tier,
     lastUpdated: row.last_updated,

@@ -23,6 +23,8 @@ export interface PersonListFilters {
   emailStatus?: string[];
   phoneType?: string[];
   jobTitle?: string;
+  employeeMin?: number;
+  employeeMax?: number;
 }
 
 export interface PersonListRow {
@@ -34,6 +36,8 @@ export interface PersonListRow {
   phone: string | null;
   phoneType: string | null;
   companyName: string | null;
+  city: string | null;
+  state: string | null;
   country: string | null;
   sources: string[];
   lastUpdated: string | null;
@@ -69,6 +73,8 @@ interface RawPersonRow {
   job_title: string | null;
   email: string | null;
   phone: string | null;
+  city: string | null;
+  state: string | null;
   country: string | null;
   source: string | null;
   tags: string[] | null;
@@ -79,7 +85,7 @@ interface RawPersonRow {
 }
 
 const LIST_COLUMNS =
-  "id,company_id,full_name,job_title,email,phone,country,source,tags,last_updated,email_status,phone_type,company_name";
+  "id,company_id,full_name,job_title,email,phone,city,state,country,source,tags,last_updated,email_status,phone_type,company_name";
 
 interface LinkedCompanyJoinRow {
   niche: string | null;
@@ -146,6 +152,28 @@ function jobTitleTerms(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Subset of PersonListFilters that fetchFilteredRowsUncached actually uses.
+ * Caching on only these fields means requests that differ solely in
+ * company-join-dependent filters (niche/industry/employeeBucket) share the
+ * same cached DB result instead of triggering redundant full-table fetches. */
+type PersonDbFilters = Pick<
+  PersonListFilters,
+  "search" | "emailStatus" | "phoneType" | "email" | "phone" | "jobTitle" | "country" | "source"
+>;
+
+function toPersonDbFilters(filters: PersonListFilters): PersonDbFilters {
+  return {
+    search: filters.search,
+    emailStatus: filters.emailStatus,
+    phoneType: filters.phoneType,
+    email: filters.email,
+    phone: filters.phone,
+    jobTitle: filters.jobTitle,
+    country: filters.country,
+    source: filters.source,
+  };
+}
+
 /** Mirrors the Companies data layer's split: native-column filters
  * (search, email status, phone type) run through PostgREST; everything
  * touching synonyms or tag-parsing (country/source/email-or-phone-presence/
@@ -153,7 +181,7 @@ function jobTitleTerms(raw: string | undefined): string[] {
  * the company join (industry/employee size/niche) are deliberately left out
  * here — see `applyCompanyJoinFilters` — so this fetch's cache key doesn't
  * depend on the non-serializable company join map. */
-async function fetchFilteredRowsUncached(filters: PersonListFilters): Promise<RawPersonRow[]> {
+async function fetchFilteredRowsUncached(filters: PersonDbFilters): Promise<RawPersonRow[]> {
   const search = filters.search?.trim();
 
   const rows = await fetchAllRows<RawPersonRow>("people", LIST_COLUMNS, (query) => {
@@ -209,9 +237,14 @@ function applyCompanyJoinFilters(
   filters: PersonListFilters,
   companyData: CompanyJoinData
 ): RawPersonRow[] {
-  if (!filters.industry?.length && !filters.employeeBucket?.length && !filters.niche?.length) {
-    return rows;
-  }
+  const hasCompanyFilters =
+    filters.industry?.length ||
+    filters.employeeBucket?.length ||
+    filters.niche?.length ||
+    filters.employeeMin != null ||
+    filters.employeeMax != null;
+
+  if (!hasCompanyFilters) return rows;
 
   return rows.filter((row) => {
     const company = row.company_id ? companyData.byId.get(row.company_id) : undefined;
@@ -221,7 +254,12 @@ function applyCompanyJoinFilters(
       if (!industry || !filters.industry.includes(industry.id)) return false;
     }
 
-    if (filters.employeeBucket?.length) {
+    if (filters.employeeMin != null || filters.employeeMax != null) {
+      const count = company?.employee_count ?? null;
+      if (count == null) return false;
+      if (filters.employeeMin != null && count < filters.employeeMin) return false;
+      if (filters.employeeMax != null && count > filters.employeeMax) return false;
+    } else if (filters.employeeBucket?.length) {
       const bucket = employeeBucketOf(company?.employee_count);
       if (!bucket || !filters.employeeBucket.includes(bucket.id)) return false;
     }
@@ -245,6 +283,8 @@ function toListRow(row: RawPersonRow): PersonListRow {
     phone: row.phone,
     phoneType: row.phone_type,
     companyName: row.company_name,
+    city: row.city,
+    state: row.state,
     country: row.country,
     sources: normalizeSourceTokens(row.source),
     lastUpdated: row.last_updated,
@@ -258,7 +298,7 @@ export async function getPeople(
 ): Promise<PersonListResult> {
   const [companyData, candidateRows] = await Promise.all([
     loadCompanyJoinData(),
-    fetchFilteredRows(filters),
+    fetchFilteredRows(toPersonDbFilters(filters)),
   ]);
   const rows = sortByLastUpdatedDesc(applyCompanyJoinFilters(candidateRows, filters, companyData));
   const start = (page - 1) * pageSize;
@@ -275,7 +315,7 @@ export async function getPeople(
 export async function getAllFilteredPeople(filters: PersonListFilters): Promise<PersonListRow[]> {
   const [companyData, candidateRows] = await Promise.all([
     loadCompanyJoinData(),
-    fetchFilteredRows(filters),
+    fetchFilteredRows(toPersonDbFilters(filters)),
   ]);
   return sortByLastUpdatedDesc(applyCompanyJoinFilters(candidateRows, filters, companyData)).map(
     toListRow
@@ -377,6 +417,13 @@ export interface PersonDetail {
   phone: string | null;
   phoneType: string | null;
   linkedinUrl: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  /** Person's own denormalized company name — populated even when linkedCompany is null */
+  companyName: string | null;
+  /** Person's own denormalized domain — populated even when linkedCompany is null */
+  domain: string | null;
   sources: string[];
   tags: string[];
   lastUpdated: string | null;
@@ -428,6 +475,11 @@ export async function getPersonDetail(id: string): Promise<PersonDetail | null> 
     phone: data.phone,
     phoneType: data.phone_type,
     linkedinUrl: data.linkedin_url,
+    city: data.city,
+    state: data.state,
+    country: data.country,
+    companyName: data.company_name,
+    domain: data.domain,
     sources: normalizeSourceTokens(data.source),
     tags: data.tags ?? [],
     lastUpdated: data.last_updated,

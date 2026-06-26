@@ -74,6 +74,11 @@ export default async function PersonDetailPage({
                   </a>
                 </RecordField>
               )}
+              {(person.city || person.state || person.country) && (
+                <RecordField label="Location">
+                  {[person.city, person.state, person.country].filter(Boolean).join(", ")}
+                </RecordField>
+              )}
             </CardContent>
           </Card>
 
@@ -94,7 +99,17 @@ export default async function PersonDetailPage({
 
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold text-ink">Linked company</h2>
-            <LinkedCompanyCard company={person.linkedCompany} />
+            {person.linkedCompany ? (
+              <LinkedCompanyCard company={person.linkedCompany} />
+            ) : person.companyName ? (
+              <div className="rounded-lg border border-rule bg-card px-5 py-4">
+                <p className="text-sm font-semibold text-ink">{person.companyName}</p>
+                {person.domain && <p className="text-xs text-ink-soft">{person.domain}</p>}
+                <p className="mt-1 text-xs italic text-ink-soft">No linked record</p>
+              </div>
+            ) : (
+              <LinkedCompanyCard company={null} />
+            )}
           </section>
 
           <section className="flex flex-col gap-2">

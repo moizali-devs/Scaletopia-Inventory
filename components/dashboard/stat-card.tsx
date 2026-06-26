@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { ArrowUpRight, Building2, Users, Layers, Cable } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,23 +34,105 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   sources: <Cable className="w-5 h-5" />,
 };
 
+function CardInner({
+  label,
+  value,
+  hint,
+  variant,
+  icon,
+  isHovered,
+  isInView,
+  href,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  variant: Variant;
+  icon: string;
+  isHovered: boolean;
+  isInView: boolean;
+  href?: string;
+}) {
+  const v = VARIANT_STYLES[variant];
+  return (
+    <Card
+      className={cn(
+        "gap-3 px-6 py-6 transition-all group hover-lift",
+        href ? "cursor-pointer" : "cursor-default",
+        v.bg,
+        v.border,
+        variant !== "plain" && "shadow-none",
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <p className="text-sm font-medium text-ink-mute uppercase tracking-wide transition-colors duration-200 group-hover:text-ink-soft">
+          {label}
+        </p>
+        <motion.div
+          className={cn("opacity-60 group-hover:opacity-100", v.iconColor)}
+          animate={isHovered ? { rotate: 10, scale: 1.15 } : { rotate: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
+          {ICON_MAP[icon] || ICON_MAP.companies}
+        </motion.div>
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <motion.span
+          className="text-3xl font-bold tabular-nums tracking-tight text-ink"
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
+          {value.toLocaleString("en-US")}
+        </motion.span>
+        {hint ? (
+          <motion.span
+            className="flex items-center gap-0.5 whitespace-nowrap pb-1 text-xs font-medium text-success"
+            initial={{ opacity: 0, x: 8 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.4 }}
+            whileHover={{ scale: 1.05 }}
+          >
+            {hint}
+            <ArrowUpRight size={13} />
+          </motion.span>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 export function StatCard({
   label,
   value,
   hint,
   variant = "plain",
   icon = label.toLowerCase(),
+  href,
 }: {
   label: string;
   value: number;
   hint?: string;
   variant?: Variant;
   icon?: string;
+  href?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-20px" });
   const [isHovered, setIsHovered] = useState(false);
-  const v = VARIANT_STYLES[variant];
+
+  const inner = (
+    <CardInner
+      label={label}
+      value={value}
+      hint={hint}
+      variant={variant}
+      icon={icon}
+      isHovered={isHovered}
+      isInView={isInView}
+      href={href}
+    />
+  );
 
   return (
     <motion.div
@@ -60,53 +143,7 @@ export function StatCard({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
     >
-      <Card
-        className={cn(
-          "gap-3 px-6 py-6 transition-all cursor-default group hover-lift",
-          v.bg,
-          v.border,
-          variant !== "plain" && "shadow-none",
-        )}
-      >
-        <div className="flex items-start justify-between">
-          <p className="text-sm font-medium text-ink-mute uppercase tracking-wide transition-colors duration-200 group-hover:text-ink-soft">
-            {label}
-          </p>
-          <motion.div
-            className={cn("opacity-60 group-hover:opacity-100", v.iconColor)}
-            animate={
-              isHovered
-                ? { rotate: 10, scale: 1.15 }
-                : { rotate: 0, scale: 1 }
-            }
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
-          >
-            {ICON_MAP[icon] || ICON_MAP.companies}
-          </motion.div>
-        </div>
-        <div className="flex items-end justify-between gap-2">
-          <motion.span
-            className="text-3xl font-bold tabular-nums tracking-tight text-ink"
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ delay: 0.2, duration: 0.3 }}
-          >
-            {value.toLocaleString("en-US")}
-          </motion.span>
-          {hint ? (
-            <motion.span
-              className="flex items-center gap-0.5 whitespace-nowrap pb-1 text-xs font-medium text-success"
-              initial={{ opacity: 0, x: 8 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ delay: 0.4 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              {hint}
-              <ArrowUpRight size={13} />
-            </motion.span>
-          ) : null}
-        </div>
-      </Card>
+      {href ? <Link href={href}>{inner}</Link> : inner}
     </motion.div>
   );
 }
