@@ -6,7 +6,7 @@ describe("exportPeopleCsv", () => {
   it("has exactly the visible table columns, in order", async () => {
     const csv = await exportPeopleCsv({ source: ["aiark"] });
     const [header] = csv.split("\n");
-    expect(header).toBe("Full Name,Job Title,Email,Phone,Company,Country,Source,Last Updated");
+    expect(header).toBe("Full Name,Job Title,Email,Email Status,Phone,Phone Type,Company,City,State,Country,Source,Last Updated");
   });
 
   it("row count matches the same filtered query used by the table", async () => {

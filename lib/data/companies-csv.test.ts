@@ -7,7 +7,7 @@ describe("exportCompaniesCsv", () => {
     const csv = await exportCompaniesCsv({ source: ["aiark"] });
     const [header] = csv.split("\n");
     expect(header).toBe(
-      "Company Name,Domain,Industry,Employees,Location,Source,Quality Tier,Last Updated"
+      "Company Name,Domain,Website URL,LinkedIn URL,Niche,Industry,Employees,City,State,Country,Phone,Source,Quality Tier,Last Updated"
     );
   });
 

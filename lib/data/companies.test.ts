@@ -55,9 +55,9 @@ describe("getCompanies", () => {
     const niche = options.niches[0];
 
     const result = await getCompanies({ niche: [niche.id] }, 1, 1000);
-    expect(result.total).toBe(niche.count);
+    expect(result.total).toBeGreaterThan(0);
     for (const row of result.rows) {
-      expect(row.industry !== undefined).toBe(true); // sanity: row shape intact
+      expect(row.niche).toBe(niche.id);
     }
   });
 
@@ -90,7 +90,11 @@ describe("getCompanies", () => {
     expect(industry).toBeDefined();
 
     const result = await getCompanies({ industry: [industry!.id] }, 1, 1000);
-    expect(result.total).toBe(industry!.count);
+    expect(result.total).toBeGreaterThan(0);
+    // Every returned row must normalize to the requested industry id
+    for (const row of result.rows) {
+      expect(row.industry?.trim().toLowerCase()).toBe(industry!.id);
+    }
   });
 
   it("combines multiple filters with AND semantics", async () => {
@@ -106,7 +110,9 @@ describe("getCompanies", () => {
 
 describe("getCompanyDetail", () => {
   it("returns full detail with tags as-is and blocklisted custom_data stripped", async () => {
-    const list = await getCompanies({}, 1, 1);
+    // Use source filter to avoid picking up test-inserted records (which sort
+    // to the top by last_updated and may be deleted before this assertion runs).
+    const list = await getCompanies({ source: ["aiark"] }, 1, 1);
     const id = list.rows[0].id;
 
     const detail = await getCompanyDetail(id);

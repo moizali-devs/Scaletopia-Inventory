@@ -94,7 +94,7 @@ export default async function CompanyDetailPage({
                 </RecordField>
                 <RecordField label="Founded">{company.foundedYear ?? "—"}</RecordField>
                 <RecordField label="Revenue">
-                  {company.revenue ? `$${company.revenue.toLocaleString("en-US")}` : "—"}
+                  {company.revenue ?? "—"}
                 </RecordField>
                 <RecordField label="Niche">{company.niche ?? "—"}</RecordField>
                 <RecordField label="Client">{company.client ?? "—"}</RecordField>

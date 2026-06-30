@@ -80,7 +80,7 @@ export function PeopleFilterSlip({ options }: { options: PersonFilterOptions }) 
     setEmpMin("");
     setEmpMax("");
     startTransition(() => {
-      router.push(pathname, { scroll: false });
+      router.replace(pathname, { scroll: false });
     });
   }
 

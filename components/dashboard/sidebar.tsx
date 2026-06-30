@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Building2, ChevronRight, PieChart, Users } from "lucide-react";
+import { Building2, ChevronRight, PieChart, Upload, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScaletopiaLogo } from "@/components/shared/scaletopia-logo";
 
-const PAGES = [
+const DIRECTORY_ITEMS = [
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/people", label: "People", icon: Users },
+];
+
+const DATA_ITEMS = [
+  { href: "/import", label: "Import", icon: Upload },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -87,9 +91,26 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <div className="px-3 pt-3">
-        <p className="px-3 py-1 text-xs text-ink-mute">Pages</p>
+        <p className="px-3 py-1 text-xs text-ink-mute">Directory</p>
         <nav className="mt-1 flex flex-col gap-0.5">
-          {PAGES.map((item) => (
+          {DIRECTORY_ITEMS.map((item) => (
+            <NavItem
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              href={item.href}
+              active={isActive(pathname, item.href)}
+              caret
+              onClick={onNavigate}
+            />
+          ))}
+        </nav>
+      </div>
+
+      <div className="px-3 pt-3">
+        <p className="px-3 py-1 text-xs text-ink-mute">Data</p>
+        <nav className="mt-1 flex flex-col gap-0.5">
+          {DATA_ITEMS.map((item) => (
             <NavItem
               key={item.label}
               label={item.label}
