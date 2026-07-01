@@ -3,7 +3,6 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAllFilteredCompanies, type CompanyListFilters } from "@/lib/data/companies";
 
 export const CLAY_CONCURRENCY = 8;
-export const MARK_CHUNK = 200;
 export const IN_CHUNK = 200;
 export const WEBHOOK_RETRIES = 1;
 export const FAILED_PREVIEW = 20;
@@ -18,8 +17,6 @@ export interface ClayPushProgress {
 
 export interface ClayPushResult {
   total_matched: number;
-  already_pushed: number;
-  total_found: number;
   pushed: number;
   errors: number;
   failed_companies: string[];
@@ -30,10 +27,23 @@ export interface RunClayPushDeps {
   onProgress?: (p: ClayPushProgress) => void;
 }
 
-const PAYLOAD_COLUMNS =
-  "id,company_name,domain,website_url,linkedin_url,industry,city,state,country,employee_count,phone,description,founded_year,revenue,source,quality_tier,mx_provider,security_gateway,keywords,technologies,pushed_to_clay";
+/** The webhook target is supplied per-push from the UI (not from env), so it
+ * must be validated before we ever POST to it. Require a well-formed https URL
+ * — this is the minimal guard against the server being pointed at an
+ * arbitrary/internal target. */
+export function isValidWebhookUrl(url: unknown): url is string {
+  if (typeof url !== "string" || url.trim() === "") return false;
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
-interface EligibleRow {
+const PAYLOAD_COLUMNS =
+  "id,company_name,domain,website_url,linkedin_url,industry,city,state,country,employee_count,phone,description,founded_year,revenue,source,quality_tier,mx_provider,security_gateway,keywords,technologies";
+
+interface CompanyRow {
   id: string;
   company_name: string | null;
   domain: string | null;
@@ -64,25 +74,23 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-/** Fresh (uncached) fetch of the eligible rows for a set of matched ids.
- * `getAllFilteredCompanies` is backed by a 1-hour TTL cache and doesn't even
- * select `pushed_to_clay`, so pushed-status must always be resolved here,
- * at execution time, against the live table. */
-async function fetchEligibleRows(matchedIds: string[]): Promise<EligibleRow[]> {
-  const rows: EligibleRow[] = [];
+/** Fetch full payload rows for the matched ids. Unlike the earlier version,
+ * this no longer filters on `pushed_to_clay` — every company in the current
+ * filter is pushed on every run, duplicates included (Clay dedupes its side). */
+async function fetchMatchedRows(matchedIds: string[]): Promise<CompanyRow[]> {
+  const rows: CompanyRow[] = [];
   for (const idChunk of chunk(matchedIds, IN_CHUNK)) {
     const { data, error } = await supabaseAdmin
       .from("companies")
       .select(PAYLOAD_COLUMNS)
-      .in("id", idChunk)
-      .not("pushed_to_clay", "is", true);
+      .in("id", idChunk);
     if (error) throw error;
-    if (data) rows.push(...(data as unknown as EligibleRow[]));
+    if (data) rows.push(...(data as unknown as CompanyRow[]));
   }
   return rows;
 }
 
-function toWebhookPayload(row: EligibleRow) {
+function toWebhookPayload(row: CompanyRow) {
   return {
     company_id: row.id,
     company_name: row.company_name,
@@ -112,7 +120,7 @@ const TRANSIENT_STATUSES = new Set([429, 500, 502, 503, 504]);
 async function postWithRetry(
   fetchImpl: typeof fetch,
   webhookUrl: string,
-  row: EligibleRow
+  row: CompanyRow
 ): Promise<boolean> {
   const body = JSON.stringify(toWebhookPayload(row));
   for (let attempt = 0; attempt <= WEBHOOK_RETRIES; attempt++) {
@@ -134,39 +142,19 @@ async function postWithRetry(
   return false;
 }
 
-async function markPushed(ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-  const nowIso = new Date().toISOString();
-  for (const idChunk of chunk(ids, MARK_CHUNK)) {
-    const { error } = await supabaseAdmin
-      .from("companies")
-      .update({ pushed_to_clay: true, pushed_to_clay_at: nowIso, last_updated: nowIso })
-      .in("id", idChunk)
-      .not("pushed_to_clay", "is", true);
-    if (error) throw error;
-  }
-}
-
-/** Resolve-only, cheap: used by the preflight route for the confirm dialog. */
-export async function resolveClayPushCounts(
-  filters: CompanyListFilters
-): Promise<{ total_matched: number; eligible: number }> {
-  const matched = await getAllFilteredCompanies(filters);
-  const total_matched = matched.length;
-  if (total_matched === 0) return { total_matched: 0, eligible: 0 };
-
-  const eligible = await fetchEligibleRows(matched.map((c) => c.id));
-  return { total_matched, eligible: eligible.length };
-}
-
-/** The whole feature. Reads process.env.CLAY_WEBHOOK_URL. */
+/** Push every company in the current filtered view to `webhookUrl`.
+ *
+ * The webhook target is passed in per-call from the UI. Filter resolution
+ * reuses `getAllFilteredCompanies` (the same path CSV export uses) so the
+ * pushed set always equals the on-screen set. No skip-already-pushed and no
+ * `pushed_to_clay` marking: every matching company is sent on every run. */
 export async function runClayPush(
   filters: CompanyListFilters,
+  webhookUrl: string,
   deps: RunClayPushDeps = {}
 ): Promise<ClayPushResult> {
-  const webhookUrl = process.env.CLAY_WEBHOOK_URL;
-  if (!webhookUrl) {
-    throw new Error("CLAY_WEBHOOK_URL is not configured");
+  if (!isValidWebhookUrl(webhookUrl)) {
+    throw new Error("A valid https webhook URL is required");
   }
 
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -179,29 +167,19 @@ export async function runClayPush(
 
   if (total_matched === 0) {
     onProgress?.({ phase: "done", done: 0, total: 0, pushed: 0, errors: 0 });
-    return {
-      total_matched: 0,
-      already_pushed: 0,
-      total_found: 0,
-      pushed: 0,
-      errors: 0,
-      failed_companies: [],
-    };
+    return { total_matched: 0, pushed: 0, errors: 0, failed_companies: [] };
   }
 
-  const eligible = await fetchEligibleRows(matched.map((c) => c.id));
-  const already_pushed = total_matched - eligible.length;
-  const total_found = eligible.length;
+  const rows = await fetchMatchedRows(matched.map((c) => c.id));
 
-  onProgress?.({ phase: "pushing", done: 0, total: total_found, pushed: 0, errors: 0 });
+  onProgress?.({ phase: "pushing", done: 0, total: rows.length, pushed: 0, errors: 0 });
 
   let pushed = 0;
   let errors = 0;
   let done = 0;
   const failed_companies: string[] = [];
-  let pendingMarkIds: string[] = [];
 
-  for (const group of chunk(eligible, CLAY_CONCURRENCY)) {
+  for (const group of chunk(rows, CLAY_CONCURRENCY)) {
     const results = await Promise.allSettled(
       group.map(async (row) => ({
         row,
@@ -213,7 +191,6 @@ export async function runClayPush(
       done++;
       if (result.status === "fulfilled" && result.value.ok) {
         pushed++;
-        pendingMarkIds.push(result.value.row.id);
       } else {
         errors++;
         const name =
@@ -224,17 +201,10 @@ export async function runClayPush(
       }
     }
 
-    if (pendingMarkIds.length >= MARK_CHUNK) {
-      await markPushed(pendingMarkIds);
-      pendingMarkIds = [];
-    }
-
-    onProgress?.({ phase: "pushing", done, total: total_found, pushed, errors });
+    onProgress?.({ phase: "pushing", done, total: rows.length, pushed, errors });
   }
 
-  await markPushed(pendingMarkIds);
+  onProgress?.({ phase: "done", done, total: rows.length, pushed, errors });
 
-  onProgress?.({ phase: "done", done, total: total_found, pushed, errors });
-
-  return { total_matched, already_pushed, total_found, pushed, errors, failed_companies };
+  return { total_matched, pushed, errors, failed_companies };
 }

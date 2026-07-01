@@ -78,7 +78,7 @@ export function CompaniesResultsClient() {
           {result.total.toLocaleString("en-US")} companies
         </h2>
         <div className="flex items-center gap-2">
-          <PushToClayButton paramsStr={paramsStr} />
+          <PushToClayButton paramsStr={paramsStr} total={result.total} />
           <ExportButton href={exportHref} />
         </div>
       </div>

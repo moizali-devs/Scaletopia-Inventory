@@ -1,12 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import {
-  runClayPush,
-  resolveClayPushCounts,
-  FAILED_PREVIEW,
-} from "@/lib/clay/push-to-clay";
+import { runClayPush, isValidWebhookUrl, FAILED_PREVIEW } from "@/lib/clay/push-to-clay";
 
 const TEST_PREFIX = "__test-clay-push__";
+const WEBHOOK_URL = "https://example.com/test-clay-webhook";
 
 function testDomain(niche: string, slug: string) {
   return `${TEST_PREFIX}${niche}-${slug}.example.com`;
@@ -16,15 +13,6 @@ async function cleanup() {
   await supabaseAdmin.from("companies").delete().like("domain", `${TEST_PREFIX}%`);
 }
 
-// `fetchImpl` is always stubbed in these tests, so the URL itself is never
-// dereferenced — but `runClayPush` requires the env var to be set before it
-// will do any work, so ensure it's present regardless of local .env state.
-// `.env.local` may define CLAY_WEBHOOK_URL="" (present but not yet configured
-// with a real value), so treat any falsy value — not just null/undefined —
-// as "unset" for test purposes.
-beforeAll(() => {
-  process.env.CLAY_WEBHOOK_URL ||= "https://example.com/test-clay-webhook";
-});
 beforeAll(cleanup);
 afterAll(cleanup);
 
@@ -53,9 +41,19 @@ function uniqueNiche(label: string) {
   return `${TEST_PREFIX}${label}-${nicheCounter}`;
 }
 
+describe("isValidWebhookUrl", () => {
+  it("accepts https URLs and rejects everything else", () => {
+    expect(isValidWebhookUrl("https://api.clay.com/v3/sources/webhook/abc")).toBe(true);
+    expect(isValidWebhookUrl("http://example.com")).toBe(false);
+    expect(isValidWebhookUrl("not a url")).toBe(false);
+    expect(isValidWebhookUrl("")).toBe(false);
+    expect(isValidWebhookUrl(undefined)).toBe(false);
+  });
+});
+
 describe("runClayPush", () => {
-  it("pushes only unpushed rows", async () => {
-    const niche = uniqueNiche("unpushed");
+  it("pushes every matching company, including ones pushed before", async () => {
+    const niche = uniqueNiche("all");
     await seedCompanies(niche, [
       { slug: "a" },
       { slug: "b" },
@@ -63,24 +61,27 @@ describe("runClayPush", () => {
     ]);
 
     const fetchImpl = okFetch();
-    const result = await runClayPush({ niche: [niche] }, { fetchImpl });
+    const result = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl });
 
     expect(result.total_matched).toBe(3);
-    expect(result.already_pushed).toBe(1);
-    expect(result.total_found).toBe(2);
-    expect(result.pushed).toBe(2);
+    expect(result.pushed).toBe(3);
     expect(result.errors).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
 
-    const { data } = await supabaseAdmin
-      .from("companies")
-      .select("domain,pushed_to_clay,pushed_to_clay_at")
-      .in("domain", [testDomain(niche, "a"), testDomain(niche, "b")]);
+  it("re-pushes on a second run (no skip-already-pushed)", async () => {
+    const niche = uniqueNiche("repeat");
+    await seedCompanies(niche, [{ slug: "a" }, { slug: "b" }]);
 
-    expect(data).toHaveLength(2);
-    for (const row of data ?? []) {
-      expect(row.pushed_to_clay).toBe(true);
-      expect(row.pushed_to_clay_at).not.toBeNull();
-    }
+    const first = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl: okFetch() });
+    expect(first.pushed).toBe(2);
+
+    const secondFetch = okFetch();
+    const second = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl: secondFetch });
+
+    expect(second.total_matched).toBe(2);
+    expect(second.pushed).toBe(2);
+    expect(secondFetch).toHaveBeenCalledTimes(2);
   });
 
   it("does not abort the batch on a webhook failure", async () => {
@@ -95,47 +96,22 @@ describe("runClayPush", () => {
       return { ok: true } as Response;
     }) as unknown as typeof fetch;
 
-    const result = await runClayPush({ niche: [niche] }, { fetchImpl });
+    const result = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl });
 
-    expect(result.total_found).toBe(3);
+    expect(result.total_matched).toBe(3);
     expect(result.pushed).toBe(2);
     expect(result.errors).toBe(1);
-    expect(result.failed_companies).toContain(`Clay Test bad`);
-
-    const { data } = await supabaseAdmin
-      .from("companies")
-      .select("pushed_to_clay")
-      .eq("domain", testDomain(niche, "bad"))
-      .single();
-
-    expect(data?.pushed_to_clay).toBe(false);
-  });
-
-  it("is idempotent — a second run finds nothing left to push", async () => {
-    const niche = uniqueNiche("idempotent");
-    await seedCompanies(niche, [{ slug: "a" }, { slug: "b" }]);
-
-    const first = await runClayPush({ niche: [niche] }, { fetchImpl: okFetch() });
-    expect(first.pushed).toBe(2);
-
-    const secondFetch = okFetch();
-    const second = await runClayPush({ niche: [niche] }, { fetchImpl: secondFetch });
-
-    expect(second.total_found).toBe(0);
-    expect(second.pushed).toBe(0);
-    expect(secondFetch).not.toHaveBeenCalled();
+    expect(result.failed_companies).toContain("Clay Test bad");
   });
 
   it("returns an all-zero result for an empty filter match", async () => {
     const niche = uniqueNiche("empty");
     const fetchImpl = okFetch();
 
-    const result = await runClayPush({ niche: [niche] }, { fetchImpl });
+    const result = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl });
 
     expect(result).toEqual({
       total_matched: 0,
-      already_pushed: 0,
-      total_found: 0,
       pushed: 0,
       errors: 0,
       failed_companies: [],
@@ -143,17 +119,10 @@ describe("runClayPush", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("rejects when CLAY_WEBHOOK_URL is not configured", async () => {
-    const original = process.env.CLAY_WEBHOOK_URL;
-    delete process.env.CLAY_WEBHOOK_URL;
-
-    try {
-      await expect(runClayPush({ niche: [uniqueNiche("no-config")] })).rejects.toThrow(
-        "CLAY_WEBHOOK_URL is not configured"
-      );
-    } finally {
-      if (original !== undefined) process.env.CLAY_WEBHOOK_URL = original;
-    }
+  it("rejects when the webhook URL is invalid", async () => {
+    await expect(
+      runClayPush({ niche: [uniqueNiche("bad-url")] }, "http://insecure.example.com")
+    ).rejects.toThrow("valid https webhook URL");
   });
 
   it("caps failed_companies at FAILED_PREVIEW", async () => {
@@ -165,21 +134,9 @@ describe("runClayPush", () => {
     );
 
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 400 }) as unknown as typeof fetch;
-    const result = await runClayPush({ niche: [niche] }, { fetchImpl });
+    const result = await runClayPush({ niche: [niche] }, WEBHOOK_URL, { fetchImpl });
 
     expect(result.errors).toBe(count);
     expect(result.failed_companies).toHaveLength(FAILED_PREVIEW);
-  });
-});
-
-describe("resolveClayPushCounts", () => {
-  it("reports matched vs eligible counts without pushing anything", async () => {
-    const niche = uniqueNiche("preflight");
-    await seedCompanies(niche, [{ slug: "a" }, { slug: "b", pushed: true }]);
-
-    const counts = await resolveClayPushCounts({ niche: [niche] });
-
-    expect(counts.total_matched).toBe(2);
-    expect(counts.eligible).toBe(1);
   });
 });

@@ -6,12 +6,10 @@ import { Loader2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { showToast } from "@/components/shared/toast";
 
-type PreflightResult = { total_matched: number; eligible: number };
+const WEBHOOK_STORAGE_KEY = "clay-webhook-url";
 
 type PushDoneResult = {
   total_matched: number;
-  already_pushed: number;
-  total_found: number;
   pushed: number;
   errors: number;
   failed_companies: string[];
@@ -22,62 +20,63 @@ type SseEvent =
   | { type: "done"; result: PushDoneResult }
   | { type: "error"; message: string };
 
-type Status = "idle" | "checking" | "confirming" | "pushing";
+type Status = "idle" | "confirming" | "pushing";
 
-export function PushToClayButton({ paramsStr }: { paramsStr: string }) {
+function isValidHttps(url: string): boolean {
+  try {
+    return new URL(url.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function PushToClayButton({ paramsStr, total }: { paramsStr: string; total: number }) {
   const [status, setStatus] = useState<Status>("idle");
-  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [pushLabel, setPushLabel] = useState<string | null>(null);
 
-  const busy = status === "checking" || status === "pushing";
+  const busy = status === "pushing";
+  const urlValid = isValidHttps(webhookUrl);
 
-  async function handleClick() {
+  function handleClick() {
     if (busy) return;
-    setStatus("checking");
-
-    try {
-      const response = await fetch(`/api/companies/push-to-clay/preflight?${paramsStr}`);
-      if (!response.ok) {
-        throw new Error("Preflight failed");
-      }
-
-      const data: PreflightResult = await response.json();
-
-      if (data.eligible === 0) {
-        if (data.total_matched === 0) {
-          showToast("No companies match the current filters.", "info");
-        } else {
-          showToast("All matching companies have already been pushed to Clay.", "info");
-        }
-        setStatus("idle");
-        return;
-      }
-
-      setPreflight(data);
-      setStatus("confirming");
-    } catch (error) {
-      showToast("Couldn't check companies. Try again.", "error");
-      console.error("Push to Clay preflight error:", error);
-      setStatus("idle");
+    if (total === 0) {
+      showToast("No companies match the current filters.", "info");
+      return;
     }
+    // Pre-fill the last URL used on this device for convenience.
+    if (typeof window !== "undefined") {
+      setWebhookUrl(window.localStorage.getItem(WEBHOOK_STORAGE_KEY) ?? "");
+    }
+    setStatus("confirming");
   }
 
   function handleCancel() {
-    setPreflight(null);
+    if (busy) return;
     setStatus("idle");
   }
 
   async function handleConfirm() {
+    if (!urlValid) return;
+    const url = webhookUrl.trim();
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(WEBHOOK_STORAGE_KEY, url);
+    }
+
     setStatus("pushing");
     setPushLabel("Pushing…");
 
     try {
       const response = await fetch(`/api/companies/push-to-clay?${paramsStr}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl: url }),
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("Push failed");
+        const message =
+          (await response.json().catch(() => null))?.error ?? "Push failed";
+        throw new Error(message);
       }
 
       const reader = response.body.getReader();
@@ -100,13 +99,9 @@ export function PushToClayButton({ paramsStr }: { paramsStr: string }) {
         }
       }
     } catch (error) {
-      showToast(
-        "Push interrupted — re-run to continue; already-pushed companies are skipped.",
-        "error"
-      );
+      showToast((error as Error).message || "Push interrupted — try again.", "error");
       console.error("Push to Clay stream error:", error);
     } finally {
-      setPreflight(null);
       setPushLabel(null);
       setStatus("idle");
     }
@@ -132,20 +127,18 @@ export function PushToClayButton({ paramsStr }: { paramsStr: string }) {
         const more = failed_companies.length > 3 ? "…" : "";
         showToast(`Pushed ${pushed}, ${errors} failed: ${names}${more}.`, "error");
       } else {
-        showToast(`All ${errors} pushes failed. Check the Clay webhook.`, "error");
+        showToast(`All ${errors} pushes failed. Check the webhook URL.`, "error");
       }
     }
   }
 
-  const label =
-    status === "pushing" && pushLabel
-      ? pushLabel
-      : status === "checking"
-        ? "Checking…"
-        : "Push to Clay";
+  const label = status === "pushing" && pushLabel ? pushLabel : "Push to Clay";
 
   return (
-    <AlertDialog.Root open={status === "confirming"} onOpenChange={(open) => !open && handleCancel()}>
+    <AlertDialog.Root
+      open={status === "confirming"}
+      onOpenChange={(open) => !open && handleCancel()}
+    >
       <button
         onClick={handleClick}
         disabled={busy}
@@ -163,21 +156,36 @@ export function PushToClayButton({ paramsStr }: { paramsStr: string }) {
 
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
-        <AlertDialog.Content className="fixed top-[30%] left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-xl border border-rule bg-popover p-5 shadow-2xl outline-none">
+        <AlertDialog.Content className="fixed top-[28%] left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-xl border border-rule bg-popover p-5 shadow-2xl outline-none">
           <AlertDialog.Title className="text-sm font-semibold text-ink">
             Push to Clay?
           </AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-sm text-ink-soft">
-            {preflight && preflight.eligible >= 1000 ? (
+            {total >= 1000 ? (
               <span className="mb-1 block text-xs text-ink-mute">
                 This is a large push — confirm your filters.
               </span>
             ) : null}
-            <strong className="text-ink">{preflight?.eligible ?? 0}</strong> companies will be
-            pushed. ({preflight?.total_matched ?? 0} match your current filters;{" "}
-            {(preflight?.total_matched ?? 0) - (preflight?.eligible ?? 0)} already pushed and will
-            be skipped.)
+            <strong className="text-ink">{total.toLocaleString("en-US")}</strong> companies in the
+            current view will be pushed. Every matching company is sent, including any pushed
+            before.
           </AlertDialog.Description>
+
+          <label className="mt-4 block text-xs font-medium text-ink-soft">
+            Clay webhook URL
+            <input
+              type="url"
+              inputMode="url"
+              autoFocus
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://api.clay.com/v3/sources/webhook/…"
+              className="mt-1 w-full rounded-md border border-rule bg-transparent px-2.5 py-1.5 text-xs text-ink outline-none focus-visible:ring-2 focus-visible:ring-stamp/50"
+            />
+          </label>
+          {webhookUrl.trim() !== "" && !urlValid ? (
+            <p className="mt-1 text-xs text-danger">Enter a valid https:// URL.</p>
+          ) : null}
 
           <div className="mt-5 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
@@ -188,15 +196,17 @@ export function PushToClayButton({ paramsStr }: { paramsStr: string }) {
                 Cancel
               </button>
             </AlertDialog.Cancel>
-            <AlertDialog.Action asChild>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="rounded-md bg-stamp px-3 py-1.5 text-xs font-medium text-white transition-smooth hover:opacity-90 focus-visible:ring-2 focus-visible:ring-stamp/50"
-              >
-                Push {preflight?.eligible ?? 0}
-              </button>
-            </AlertDialog.Action>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!urlValid}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium text-white transition-smooth focus-visible:ring-2 focus-visible:ring-stamp/50",
+                urlValid ? "bg-stamp hover:opacity-90" : "bg-stamp/40 cursor-not-allowed"
+              )}
+            >
+              Push {total.toLocaleString("en-US")}
+            </button>
           </div>
         </AlertDialog.Content>
       </AlertDialog.Portal>

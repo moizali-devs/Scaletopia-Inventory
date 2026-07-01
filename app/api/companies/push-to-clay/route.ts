@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { parseCompanyFilters } from "@/lib/data/companies-search-params";
-import { runClayPush, type ClayPushProgress } from "@/lib/clay/push-to-clay";
+import { runClayPush, isValidWebhookUrl, type ClayPushProgress } from "@/lib/clay/push-to-clay";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -10,13 +10,30 @@ function sseEvent(data: unknown): Uint8Array {
 }
 
 export async function POST(request: NextRequest) {
+  // Filters ride in the query string (identical parsing to export/results);
+  // the webhook target is supplied per-push in the JSON body.
   const filters = parseCompanyFilters(request.nextUrl.searchParams);
+
+  let webhookUrl: unknown;
+  try {
+    ({ webhookUrl } = await request.json());
+  } catch {
+    return Response.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (!isValidWebhookUrl(webhookUrl)) {
+    return Response.json(
+      { error: "A valid https webhook URL is required" },
+      { status: 400 }
+    );
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const result = await runClayPush(filters, {
-          onProgress: (p: ClayPushProgress) => controller.enqueue(sseEvent({ type: "progress", ...p })),
+        const result = await runClayPush(filters, webhookUrl, {
+          onProgress: (p: ClayPushProgress) =>
+            controller.enqueue(sseEvent({ type: "progress", ...p })),
         });
         controller.enqueue(sseEvent({ type: "done", result }));
       } catch (err) {
