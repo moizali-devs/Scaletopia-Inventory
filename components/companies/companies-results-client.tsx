@@ -6,6 +6,7 @@ import type { CompanyListResult } from "@/lib/data/companies";
 import { CompaniesTable } from "@/components/companies/companies-table";
 import { Pagination } from "@/components/companies/pagination";
 import { ExportButton } from "@/components/companies/export-button";
+import { PushToClayButton } from "@/components/companies/push-to-clay-button";
 import { SkeletonTable } from "@/components/shared/skeleton-loaders";
 
 const cache = new Map<string, CompanyListResult>();
@@ -76,7 +77,10 @@ export function CompaniesResultsClient() {
         <h2 className="text-sm font-semibold text-ink">
           {result.total.toLocaleString("en-US")} companies
         </h2>
-        <ExportButton href={exportHref} />
+        <div className="flex items-center gap-2">
+          <PushToClayButton paramsStr={paramsStr} />
+          <ExportButton href={exportHref} />
+        </div>
       </div>
 
       <CompaniesTable rows={result.rows} />

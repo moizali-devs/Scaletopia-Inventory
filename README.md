@@ -35,7 +35,10 @@ npm run dev
 # .env.local
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+CLAY_WEBHOOK_URL=
 ```
+
+`CLAY_WEBHOOK_URL` is server-only (read in `lib/clay/push-to-clay.ts`, never exposed to the client). The "Push to Clay" toolbar action pushes the current Companies filter view and automatically skips companies already pushed.
 
 ---
 
